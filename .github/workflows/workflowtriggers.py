@@ -107,6 +107,12 @@ argParser.add_argument(
     action=argparse.BooleanOptionalAction,
 )
 argParser.add_argument(
+    "--cleanuphistoricalscans",
+    help="clean up historical scan results from github server commits",
+    required=required,
+    action=argparse.BooleanOptionalAction,
+)
+argParser.add_argument(
     "-t",
     "--triggerRemotely",
     help="Launch Remote trigger",
@@ -146,13 +152,14 @@ objectDictionary = {}
 # args.backtests = True
 # args.local = True
 # args.triggerRemotely = True
+# args.cleanuphistoricalscans = True
 # args.scanDaysInPast = 1
 # args.reScanForZeroSize = True
 # args.user="-1001785195297"
-# args.skiplistlevel0 ="S,T,E,U,Z,H,Y,X"
-# args.skiplistlevel1 ="W,N,E,M,Z,0,1,2,3,4,5,6,7,8,9,10,11,13,14"
-# args.skiplistlevel2 ="0,1,2,3,4,5,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,42,M,Z"
-# args.skiplistlevel3 = "0,1,2,4,5,6"
+# args.skiplistlevel0 ="S,T,E,U,Z,H,Y,B,G"
+# args.skiplistlevel1 ="W,N,E,M,Z,0"
+# args.skiplistlevel2 ="0,26,27,28,29,30,42,M,Z"
+# args.skiplistlevel3 = "0"
 
 if args.skiplistlevel0 is None:
     args.skiplistlevel0 = ",".join(["S", "T", "E", "U", "Z", "B", "H", "Y", "G"])
@@ -344,6 +351,24 @@ def run_workflow(workflow_name, postdata):
         print(f"Something went wrong while triggering {workflow_name}")
     return resp
 
+def cleanuphistoricalscans(scanDaysInPast=270):
+    for key in objectDictionary.keys():
+        scanOptions = f'{objectDictionary[key]["td3"]}_D_D_D'
+        branch = "actions-data-download"
+        if args.branchname is None:
+            args.branchname = branch
+        scanOptions = objectDictionary[key]["td3"]
+        options = f'{scanOptions.replace("_",":").replace("B:","X:")}:D:D:D'
+        daysInPast = scanDaysInPast
+        removedItemCount = 0
+        while daysInPast >=251:
+            exists, fileSize, fileName = scanResultExists(options,daysInPast,True)
+            if exists or fileSize >=0:
+                os.remove(fileName)
+                removedItemCount += 1
+            daysInPast -=1
+        if removedItemCount > 0:
+            tryCommitOutcomes(options)
 
 def triggerScanWorkflowActions(launchLocal=False, scanDaysInPast=0):
     # original_stdout = sys.stdout
@@ -361,7 +386,7 @@ def triggerScanWorkflowActions(launchLocal=False, scanDaysInPast=0):
             while daysInPast >=0:
                 # sys.stdout = original_stdout
                 # sys.__stdout__ = original__stdout
-                if not scanResultExists(options,daysInPast,args.reScanForZeroSize):
+                if not scanResultExists(options,daysInPast,args.reScanForZeroSize)[0]:
                     os.environ["RUNNER"]="LOCAL_RUN_SCANNER"
                     ag = agp.parse_known_args(args=["-p","-e", "-a", "Y", "-o", options, "--backtestdaysago",str(daysInPast),"--maxdisplayresults","500","-v"])[0]
                     pkscreenercli.args = ag
@@ -398,13 +423,14 @@ def triggerScanWorkflowActions(launchLocal=False, scanDaysInPast=0):
                 sleep(5)
             else:
                 break
+
 def triggerHistoricalScanWorkflowActions(scanDaysInPast=0):
     defaultS1 = "W,N,E,M,Z,0,2,3,4,6,7,9,10,13"
     defaultS2 = "42,0,21,22,26,27,28,29,30,31,M,Z"
     runForIndices = [12,5,8,1,11,14]
     runForOptions = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,23,24,25]
-    runForIndicesStr = f" {' , '.join(map(str, runForIndices))},"
-    runForOptionsStr = f" {' , '.join(map(str, runForOptions))},"
+    runForIndicesStr = f" {' , '.join(map(str, runForIndices))} , "
+    runForOptionsStr = f" {' , '.join(map(str, runForOptions))} , "
     branch = "actions-data-download"
     for index in runForIndices:
         skip1List = runForIndicesStr.replace(f' {str(index)} , ',f"{defaultS1},").replace(" ","")[:-1]
@@ -414,10 +440,9 @@ def triggerHistoricalScanWorkflowActions(scanDaysInPast=0):
                         '{"ref":"'
                         + branch
                         + '","inputs":{"installtalib":"N","skipDownload":"Y","scanOptions":"'
-                        + f'--scanDaysInPast {scanDaysInPast} -s2 {skip2List} -s1 {skip1List} -s0 S,T,E,U,Z,H,Y,B,G -s3 {str(0)} --branchname actions-data-download --scans --local"'
+                        + f'--scanDaysInPast {scanDaysInPast} -s2 {skip2List} -s1 {skip1List} -s0 S,T,E,U,Z,H,Y,B,G -s3 {str(0)} --branchname actions-data-download --scans --local","name":"X_{index}_{option}"'
                         + '}'
                         )
-
             resp = run_workflow("w9-workflow-download-data.yml", postdata)
             if resp.status_code == 204:
                 sleep(60)
@@ -453,6 +478,7 @@ def scanResultExists(options, nthDay=0,returnFalseIfSizeZero=True):
     outputFolder = scanOutputDirectory()
     fileName = f"{outputFolder}{os.sep}{choices}_{today}.txt"
     print(f"{datetime.datetime.now(pytz.timezone('Asia/Kolkata'))} : Checking for {fileName}")
+    fileSize = -1
     if os.path.isfile(fileName):
         if returnFalseIfSizeZero:
             fileSize = os.path.getsize(fileName)
@@ -465,7 +491,7 @@ def scanResultExists(options, nthDay=0,returnFalseIfSizeZero=True):
             print(f"{datetime.datetime.now(pytz.timezone('Asia/Kolkata'))} : Skipping. Latest scan result already exists: {fileName}")
             return True
     print(f"{datetime.datetime.now(pytz.timezone('Asia/Kolkata'))} : Scanning for {choices}_{today}")
-    return False
+    return False, fileSize,fileName
 
 def triggerBacktestWorkflowActions(launchLocal=False):
     for key in objectDictionary.keys():
@@ -536,3 +562,8 @@ if args.scans:
             triggerHistoricalScanWorkflowActions(scanDaysInPast=daysInPast)
         else:
             triggerScanWorkflowActions(args.local, scanDaysInPast=daysInPast)
+if args.cleanuphistoricalscans:
+    daysInPast = 270
+    if args.scanDaysInPast is not None:
+        daysInPast = int(args.scanDaysInPast)
+    cleanuphistoricalscans(daysInPast)
