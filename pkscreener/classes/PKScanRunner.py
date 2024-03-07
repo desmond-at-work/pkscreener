@@ -263,6 +263,7 @@ class PKScanRunner:
                         results_queue,
                         screenCounter,
                         screenResultsCounter,
+                        # stockDict,
                         cache_file if exists else stockDict,
                         PKScanRunner.fetcher.proxyServer,
                         keyboardInterruptEvent,

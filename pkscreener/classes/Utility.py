@@ -71,6 +71,7 @@ from PKNSETools.PKNSEStockDataFetcher import nseStockDataFetcher
 from pkscreener.classes.PKTask import PKTask
 from pkscreener.classes.MarketStatus import MarketStatus
 from pkscreener.classes.PKScheduler import PKScheduler
+from PKDevTools.classes.Utils import random_user_agent
 
 configManager = ConfigManager.tools()
 configManager.getConfig(ConfigManager.parser)
@@ -716,7 +717,7 @@ class tools:
                 break
         return exists, cache_file
 
-    def saveStockData(stockDict, configManager, loadCount, intraday=False, downloadOnly=False):
+    def saveStockData(stockDict, configManager, loadCount, intraday=False, downloadOnly=False, forceSave=False):
         exists, fileName = tools.afterMarketStockDataExists(
             configManager.isIntradayConfig() or intraday
         )
@@ -727,7 +728,7 @@ class tools:
                 os.makedirs(os.path.dirname(f"{outputFolder}{os.sep}"), exist_ok=True)
             configManager.deleteFileWithPattern(rootDir=outputFolder)
         cache_file = os.path.join(outputFolder, fileName)
-        if not os.path.exists(cache_file) or (loadCount > 0 and len(stockDict) > (loadCount + 1)):
+        if not os.path.exists(cache_file) or forceSave or (loadCount > 0 and len(stockDict) > (loadCount + 1)):
             try:
                 with open(cache_file, "wb") as f:
                     pickle.dump(stockDict.copy(), f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -768,7 +769,7 @@ class tools:
             queueCounter += 1
         
         if len(tasksList) > 0:
-            PKScheduler.scheduleTasks(tasksList=tasksList, label=f"Downloading {'latest' if len(stockCodes)<2000 else (len(stockCodes) +' stocks ')} data (Total={len(tasksList)}){'Be Patient!' if len(stockCodes)> 2000 else ''}")
+            PKScheduler.scheduleTasks(tasksList=tasksList, label=f"Downloading latest data (Total={len(stockCodes)} records in {len(tasksList)} batches){'Be Patient!' if len(stockCodes)> 2000 else ''}")
             for task in tasksList:
                 if task.result is not None:
                     for stock in task.userData:
@@ -792,7 +793,8 @@ class tools:
             isIntraday, forceLoad=forceLoad
         )
         initialLoadCount = len(stockDict)
-        if (stockCodes is not None and len(stockCodes) > 0) and (PKDateUtilities.isTradingTime() or downloadOnly):
+        isTrading = PKDateUtilities.isTradingTime()
+        if (stockCodes is not None and len(stockCodes) > 0) and (isTrading or downloadOnly):
             stockDict = tools.downloadLatestData(stockDict,configManager,stockCodes,exchangeSuffix=exchangeSuffix)
             # return stockDict
 
@@ -835,9 +837,17 @@ class tools:
                             try:
                                 existingPreLoadedData = stockDict.get(stock)
                                 if existingPreLoadedData is not None:
-                                    stockDict[stock] = df_or_dict | existingPreLoadedData
+                                    if isTrading:
+                                        # Only copy the MF/FII/FairValue data and leave the stock prices as is.
+                                        cols = ["MF", "FII","MF_Date","FII_Date","FairValue"]
+                                        for col in cols:
+                                            existingPreLoadedData[col] = df_or_dict.get(col)
+                                        stockDict[stock] = existingPreLoadedData
+                                    else:
+                                        stockDict[stock] = df_or_dict | existingPreLoadedData
                                 else:
-                                    stockDict[stock] = df_or_dict
+                                    if not isTrading:
+                                        stockDict[stock] = df_or_dict
                             except:
                                 # Probably, the "stock" got removed from the latest download
                                 # and so, was not found in stockDict
@@ -889,12 +899,27 @@ class tools:
                 + colorText.END
             )
             cache_url = (
-                "https://raw.github.com/pkjmesra/PKScreener/actions-data-download/actions-data-download/"
+                "https://raw.githubusercontent.com/pkjmesra/PKScreener/actions-data-download/actions-data-download/"
                 + cache_file  # .split(os.sep)[-1]
             )
-            resp = fetcher.fetchURL(cache_url, stream=True)
+            headers = {
+                    'authority': 'raw.githubusercontent.com',
+                    'accept': '*/*',
+                    'accept-language': 'en-US,en;q=0.9',
+                    'dnt': '1',
+                    'sec-ch-ua-mobile': '?0',
+                    # 'sec-ch-ua-platform': '"macOS"',
+                    'sec-fetch-dest': 'empty',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-site': 'cross-site',                  
+                    'origin': 'https://github.com',
+                    'referer': f'https://github.com/pkjmesra/PKScreener/blob/actions-data-download/actions-data-download/{cache_file}',
+                    'user-agent': f'{random_user_agent()}' 
+                    #'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+            }
+            resp = fetcher.fetchURL(cache_url, headers=headers, stream=True)
             if resp is not None:
-                default_logger().info(
+                default_logger().debug(
                     f"Stock data cache file:{cache_file} request status ->{resp.status_code}"
                 )
             if resp is not None and resp.status_code == 200:
@@ -904,7 +929,7 @@ class tools:
                 MB = KB * 1024
                 chunksize = MB if serverBytes >= MB else (KB if serverBytes >= KB else 1)
                 filesize = int( serverBytes / chunksize)
-                if filesize > 0:
+                if filesize > 0 and chunksize == MB: # Saved data can't be in KBs. Something definitely went wrong.
                     bar, spinner = tools.getProgressbarStyle()
                     try:
                         f = open(
@@ -949,9 +974,17 @@ class tools:
                                 try:
                                     existingPreLoadedData = stockDict.get(stock)
                                     if existingPreLoadedData is not None:
-                                        stockDict[stock] = df_or_dict | existingPreLoadedData
+                                        if isTrading:
+                                            # Only copy the MF/FII/FairValue data and leave the stock prices as is.
+                                            cols = ["MF", "FII","MF_Date","FII_Date","FairValue"]
+                                            for col in cols:
+                                                existingPreLoadedData[col] = df_or_dict.get(col)
+                                            stockDict[stock] = existingPreLoadedData
+                                        else:
+                                            stockDict[stock] = df_or_dict | existingPreLoadedData
                                     else:
-                                        stockDict[stock] = df_or_dict
+                                        if not isTrading:
+                                            stockDict[stock] = df_or_dict
                                 except:
                                     # Probably, the "stock" got removed from the latest download
                                     # and so, was not found in stockDict
@@ -963,7 +996,7 @@ class tools:
                         print("[!] Download Error - " + str(e))
                 else:
                     default_logger().debug(
-                        f"Stock data cache file:{cache_file} on server has length ->{filesize}"
+                        f"Stock data cache file:{cache_file} on server has length ->{filesize}{chunksize}"
                     )
                 if not retrial and not stockDataLoaded:
                     # Don't try for more than once.
@@ -974,6 +1007,10 @@ class tools:
                         defaultAnswer,
                         retrial=True,
                         forceLoad=forceLoad,
+                        stockCodes=stockCodes,
+                        exchangeSuffix=exchangeSuffix,
+                        isIntraday = isIntraday,
+                        forceRedownload=forceRedownload
                     )
         if not stockDataLoaded:
             print(
@@ -983,7 +1020,8 @@ class tools:
                 + colorText.END
             )
         # See if we need to save stock data
-        tools.saveStockData(stockDict,configManager,initialLoadCount,isIntraday,downloadOnly)
+        if stockDataLoaded:
+            tools.saveStockData(stockDict,configManager,initialLoadCount,isIntraday,downloadOnly, forceSave=stockDataLoaded)
         return stockDict
 
     # Save screened results to excel
@@ -1325,8 +1363,8 @@ class tools:
         model = None
         pkl = None
         urls = [
-            "https://raw.github.com/pkjmesra/PKScreener/main/pkscreener/ml/nifty_model_v2.h5",
-            "https://raw.github.com/pkjmesra/PKScreener/main/pkscreener/ml/nifty_model_v2.pkl",
+            "https://raw.githubusercontent.com/pkjmesra/PKScreener/main/pkscreener/ml/nifty_model_v2.h5",
+            "https://raw.githubusercontent.com/pkjmesra/PKScreener/main/pkscreener/ml/nifty_model_v2.pkl",
         ]
         if os.path.isfile(files[0]) and os.path.isfile(files[1]):
             file_age = (time.time() - os.path.getmtime(files[0])) / 604800
