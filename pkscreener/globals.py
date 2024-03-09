@@ -244,7 +244,7 @@ def getSummaryCorrectnessOfStrategy(resultdf, summaryRequired=True):
             ),encoding="UTF-8", attrs = {'id': 'resultsTable'}
         )
 
-        if summaryRequired and len(dfs) > 0:
+        if summaryRequired and dfs is not None and len(dfs) > 0:
             df = dfs[0]
             summarydf = df[df["Stock"] == "SUMMARY"]
             for col in summarydf.columns:
@@ -254,7 +254,7 @@ def getSummaryCorrectnessOfStrategy(resultdf, summaryRequired=True):
                     )
                 )
             summarydf = summarydf.replace(np.nan, "", regex=True)
-        if len(dfd) > 0:
+        if dfd is not None and len(dfd) > 0:
             df = dfd[0]
             results.reset_index(inplace=True)
             detaildf = df[df["Stock"].isin(results["Stock"])]
@@ -699,6 +699,9 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 + "[+] Collecting all metrics for summarising..."
                 + colorText.END
             )
+            # Enable showing/saving past strategy data
+            savedValue = configManager.showPastStrategyData
+            configManager.showPastStrategyData = True
             df_all = PortfolioXRay.summariseAllStrategies()
             if df_all is not None and len(df_all) > 0:
                 print(
@@ -715,6 +718,8 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 )
             else:
                 print("[!] Nothing to show here yet. Check back later.")
+            # reinstate whatever was the earlier saved value
+            configManager.showPastStrategyData = savedValue
             if defaultAnswer is None:
                 input("Press <Enter> to continue...")
             return
@@ -968,10 +973,19 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             return
         else:
             listStockCodes = ",".join(list(screenResults.index))
+    if executeOption == 26:
+        dividend_df, bonus_df, stockSplit_df = mstarFetcher.getCorporateActions()
+        ca_dfs = [dividend_df, bonus_df, stockSplit_df]
+        listStockCodes = []
+        for df in ca_dfs:
+            df = df[
+                df["Stock"].astype(str).str.contains("BSE:") == False
+            ]
+            listStockCodes.extend(list(df["Stock"]))
     if executeOption == 42:
         Utility.tools.getLastScreenedResults(defaultAnswer)
         return
-    if executeOption >= 26 and executeOption <= 41:
+    if executeOption >= 27 and executeOption <= 41:
         print(
             colorText.BOLD
             + colorText.FAIL
@@ -1135,7 +1149,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             if not downloadOnly and menuOption in ["X", "G", "C"]:
                 if menuOption == "G":
                     userPassedArgs.backtestdaysago = backtestPeriod
-                if len(screenResults) > 0:
+                if screenResults is not None and len(screenResults) > 0:
                     screenResults, saveResults = labelDataForPrinting(
                         screenResults, saveResults, configManager, volumeRatio, executeOption, reversalOption or respChartPattern
                     )
@@ -1152,17 +1166,58 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                     for stk in saveResults.index.values:
                         df_screenResults_filter = screenResults[screenResults.index.astype(str).str.contains(f"NSE%3A{stk}") == True]
                         df_screenResults = pd.concat([df_screenResults, df_screenResults_filter], axis=0)
-                    if len(df_screenResults) == 0:
+                    if df_screenResults is None or len(df_screenResults) == 0:
                         print(colorText.FAIL + f"[+] Of the {len(screenResults)} stocks, no results matching the selected strategies!" + colorText.END)
                     screenResults = df_screenResults
-                printNotifySaveScreenedResults(
-                    screenResults,
-                    saveResults,
-                    selectedChoice,
-                    menuChoiceHierarchy,
-                    testing,
-                    user=user,
-                )
+                if executeOption == 26:
+                    removedUnusedColumns(screenResults, saveResults, ["Date"],userArgs=userPassedArgs)
+                    screen_copy = screenResults.copy()
+                    screen_copy.reset_index(inplace=True)
+                    dividend_df = pd.merge(screen_copy, dividend_df, on='Stock')
+                    bonus_df = pd.merge(screen_copy, bonus_df, on='Stock')
+                    stockSplit_df = pd.merge(screen_copy, stockSplit_df, on='Stock')
+                    corp_dfs = [dividend_df, bonus_df, stockSplit_df]
+                    shareable_strings = []
+                    shouldSend = False
+                    for corp_df in corp_dfs:
+                        corp_df.set_index("Stock", inplace=True)
+                        tab_results = ""
+                        if corp_df is not None and len(corp_df) > 0:
+                            tab_results = colorText.miniTabulator().tabulate(
+                                corp_df,
+                                headers="keys",
+                                tablefmt=colorText.No_Pad_GridFormat,
+                                # showindex = False,
+                                maxcolwidths=Utility.tools.getMaxColumnWidths(dividend_df)
+                            ).encode("utf-8").decode(STD_ENCODING)
+                            shouldSend = True
+                        shareable_strings.append(tab_results)
+                        print(tab_results)
+                    if shouldSend:
+                        sendQuickScanResult(
+                            menuChoiceHierarchy,
+                            user,
+                            shareable_strings[0],
+                            Utility.tools.removeAllColorStyles(shareable_strings[0]),
+                            "NSE Stocks with dividends/bonus/splits soon",
+                            f"PKS_X_12_26_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
+                            ".png",
+                            addendum=shareable_strings[1],
+                            addendumLabel="NSE Stocks giving bonus:",
+                            backtestSummary=shareable_strings[2],
+                            backtestDetail="",
+                            summaryLabel = "NSE Stocks with corporate action type stock split:",
+                            detailLabel = None,
+                            )
+                else:
+                    printNotifySaveScreenedResults(
+                        screenResults,
+                        saveResults,
+                        selectedChoice,
+                        menuChoiceHierarchy,
+                        testing,
+                        user=user,
+                    )
         if menuOption in ["X","C"]:
             finishScreening(
                 downloadOnly,
@@ -1444,7 +1499,7 @@ def handleMonitorFiveEMA():
                                 ).encode("utf-8").decode(STD_ENCODING)
                             )
             print("\nPress Ctrl+C to exit.")
-            if len(result_df) != last_result_len and not first_scan:
+            if result_df is not None and len(result_df) != last_result_len and not first_scan:
                 Utility.tools.alertSound(beeps=5)
             sleep(60)
             first_scan = False
@@ -1739,8 +1794,8 @@ def removedUnusedColumns(screenResults, saveResults, dropAdditionalColumns=[], u
 
 
 def tabulateBacktestResults(saveResults, maxAllowed=0, force=False):
-    if ("RUNNER" not in os.environ.keys()) or ("RUNNER" in os.environ.keys() and not force) or not configManager.showPastStrategyData:
-        if "PKDevTools_Default_Log_Level" not in os.environ.keys():
+    if "PKDevTools_Default_Log_Level" not in os.environ.keys():
+        if ("RUNNER" not in os.environ.keys()) or ("RUNNER" in os.environ.keys() and not force) or not configManager.showPastStrategyData:
             return None, None
     tabulated_backtest_summary = ""
     tabulated_backtest_detail = ""
@@ -1792,9 +1847,13 @@ def sendQuickScanResult(
     pngExtension,
     addendum=None,
     addendumLabel=None,
+    backtestSummary="",
+    backtestDetail="",
+    summaryLabel = None,
+    detailLabel = None,
 ):
-    if (("RUNNER" not in os.environ.keys()) or ("RUNNER" in os.environ.keys() and os.environ["RUNNER"] == "LOCAL_RUN_SCANNER")):
-        if "PKDevTools_Default_Log_Level" not in os.environ.keys():
+    if "PKDevTools_Default_Log_Level" not in os.environ.keys():
+        if (("RUNNER" not in os.environ.keys()) or ("RUNNER" in os.environ.keys() and os.environ["RUNNER"] == "LOCAL_RUN_SCANNER")):
             return
     try:
         Utility.tools.tableToImage(
@@ -1802,10 +1861,12 @@ def sendQuickScanResult(
             tabulated_results,
             pngName + pngExtension,
             menuChoiceHierarchy,
-            backtestSummary="",
-            backtestDetail="",
+            backtestSummary=backtestSummary,
+            backtestDetail=backtestDetail,
             addendum=addendum,
             addendumLabel=addendumLabel,
+            summaryLabel = summaryLabel,
+            detailLabel = detailLabel
         )
         sendMessageToTelegramChannel(
             message=None,
