@@ -22,21 +22,23 @@
 #     SOFTWARE.
 
 # """
-# docker buildx build --push --platform linux/arm/v7,linux/arm64/v8,linux/amd64 --tag pkjmesra/pkscreener:latest .
-FROM python:3.11.6-slim-bookworm as base
+# docker buildx build --push --platform linux/arm/v7,linux/arm64/v8,linux/amd64 --tag pkjmesra/pkscreener:latest -f ./Dockerfile_base . --no-cache
+# docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag pkjmesra/pkscreener:latest -f ./Dockerfile_base . --no-cache
+
+FROM python:3.11.9-slim as base
 ENV PYTHONUNBUFFERED 1
 
 RUN apt-get install -y apt-transport-https
-RUN apt-get -y update
+RUN apt-get -y update && apt-get upgrade -y
 
-RUN apt-get install -y gcc curl make git build-essential wget unzip tar pkg-config libhdf5-serial-dev
+RUN apt-get install -y gcc curl make build-essential wget unzip tar pkg-config libhdf5-serial-dev
 
 ENV LANG C.UTF-8
 
 RUN wget https://github.com/pkjmesra/PKScreener/archive/refs/heads/main.zip && unzip main.zip
 WORKDIR /PKScreener-main
 
-RUN pip install --upgrade pip
+RUN pip3 install --upgrade pip
 
 RUN wget https://raw.githubusercontent.com/pkjmesra/PKScreener/main/.github/dependencies/ta-lib-0.4.0-src.tar.gz && \
   tar -xzf ta-lib-0.4.0-src.tar.gz && \
@@ -52,7 +54,7 @@ RUN rm -rf ta-lib ta-lib-0.4.0-src.tar.gz main.zip
 RUN pip3 install ta-lib
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 RUN pip3 install --no-deps advanced-ta
 RUN pip3 install .
 RUN wget https://raw.githubusercontent.com/pkjmesra/PKScreener/main/pkscreener/courbd.ttf && \
