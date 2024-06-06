@@ -638,8 +638,8 @@ class StockScreener:
             # Capturing Ctr+C Here isn't a great idea
             pass
         except StockDataEmptyException as e: # pragma: no cover
-            if data is None or (data is not None and not data.isnull().values.all(axis=0)[0]):
-                hostRef.default_logger.debug(f"StockDataEmptyException:{stock}: {e}", exc_info=True)
+            # if data is None or (data is not None and not data.isnull().values.all(axis=0)[0]):
+            #     hostRef.default_logger.debug(f"StockDataEmptyException:{stock}: {e}", exc_info=True)
             pass
         except ScreeningStatistics.EligibilityConditionNotMet as e:
             # if userArgsLog:
@@ -667,13 +667,13 @@ class StockScreener:
                     screener.getMutualFundStatus(stock, hostData=data, force=True, exchangeName=exchangeName)
                     hostRef.objectDictionaryPrimary[stock] = data.to_dict("split")
             except Exception as ex:
-                hostRef.default_logger.debug(f"MFIStatus: {stock}:\n{ex}", exc_info=True)
+                # hostRef.default_logger.debug(f"MFIStatus: {stock}:\n{ex}", exc_info=True)
                 pass
             try:
                 screener.getFairValue(stock,hostData=data, force=True,exchangeName=exchangeName)
                 hostRef.objectDictionaryPrimary[stock] = data.to_dict("split")
             except Exception as ex:
-                hostRef.default_logger.debug(f"FairValue: {stock}:\n{ex}", exc_info=True)
+                # hostRef.default_logger.debug(f"FairValue: {stock}:\n{ex}", exc_info=True)
                 pass
             pass
         except ScreeningStatistics.LTPNotInConfiguredRange as e: # pragma: no cover
@@ -681,16 +681,16 @@ class StockScreener:
             #     hostRef.default_logger.debug(f"LTPNotInConfiguredRange:{stock}: {e}", exc_info=True)
             pass
         except KeyError as e: # pragma: no cover
-            if userArgsLog:
-                hostRef.default_logger.debug(f"KeyError:{stock}: {e}", exc_info=True)
+            # if userArgsLog:
+            #     hostRef.default_logger.debug(f"KeyError:{stock}: {e}", exc_info=True)
             pass
         except OSError as e: # pragma: no cover
-            if userArgsLog:
-                hostRef.default_logger.debug(f"OSError:{stock}: {e}", exc_info=True)
+            # if userArgsLog:
+            #     hostRef.default_logger.debug(f"OSError:{stock}: {e}", exc_info=True)
             pass
         except Exception as e:  # pragma: no cover
-            if userArgsLog:
-                hostRef.default_logger.debug(f"Exception:{stock}: {e}", exc_info=True)
+            # if userArgsLog:
+            #     hostRef.default_logger.debug(f"Exception:{stock}: {e}", exc_info=True)
             if testbuild or printCounter:
                 # import traceback
                 # traceback.print_exc()
@@ -835,13 +835,14 @@ class StockScreener:
         data = None
         hostDataLength = 0 if hostData is None else (0 if "data" not in hostData.keys() else len(hostData["data"]))
         start = None
+        lastTradingDate = PKDateUtilities.tradingDate().strftime("%Y-%m-%d")
         if (period == '1d' or configManager.duration[-1] == "m"):
             if backtestDuration > 0: # We are backtesting
                 start = PKDateUtilities.nthPastTradingDateStringFromFutureDate(backtestDuration)
                 end = PKDateUtilities.nthPastTradingDateStringFromFutureDate(backtestDuration-1)
             else:
                 # Since this is intraday data, we'd just need to start from the last trading session
-                start = PKDateUtilities.tradingDate().strftime("%Y-%m-%d")
+                start = lastTradingDate
                 end = PKDateUtilities.currentDateTime().strftime("%Y-%m-%d")
         if (
                 not shouldCache
@@ -909,7 +910,7 @@ class StockScreener:
 
         if ((shouldCache and not self.isTradingTime and (hostData is None  or hostDataLength == 0)) or downloadOnly) \
             or (shouldCache and hostData is None):  # and backtestDuration == 0 # save only if we're NOT backtesting
-                if start is None and data is not None:
+                if start is None or start is lastTradingDate and data is not None:
                     objectDictionary[stock] = data.to_dict("split")
                 if downloadOnly:
                     with hostRef.processingResultsCounter.get_lock():

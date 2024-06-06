@@ -1,9 +1,11 @@
 ![Title](https://raw.githubusercontent.com/pkjmesra/PKScreener/main/screenshots/logos/Logo8.png)
 
 # PKScreener
-
-[![MADE-IN-INDIA][MADE-IN-INDIA-badge]][MADE-IN-INDIA] [![Windows][Windows-badge]][Windows] [![Linux][Linux-badge]][Linux] [![Mac OS][Mac OS-badge]][Mac OS] [![GitHub release (latest by date)][GitHub release (latest by date)-badge]][GitHub release (latest by date)] [![CodeFactor][Codefactor-badge]][Codefactor] [![Downloads][Downloads-badge]][Downloads] ![latest download][Latest-Downloads-badge] ![github license][github-license] [![PyPI][pypi-badge]][pypi] [![is wheel][wheel-badge]][pypi] [![Coverage Status][Coverage-Status-badge]][Coverage-Status] [![codecov][codecov-badge]][codecov] [![Docker Status][Docker Status-badge]][Docker Status]
-[![Docker Pulls][Docker Pulls-badge]][Docker Status] 
+| [![MADE-IN-INDIA][MADE-IN-INDIA-badge]][MADE-IN-INDIA] | [![GitHub release (latest by date)][GitHub release (latest by date)-badge]][GitHub release (latest by date)] | [![Downloads][Downloads-badge]][Downloads] | ![latest download][Latest-Downloads-badge]  | [![Docker Pulls][Docker Pulls-badge]][Docker Status] |
+| :-------------: | :-----------------: | :-----------------: | :-----------------: | :-----------------: |
+| Platforms | [![Windows][Windows-badge]][Windows] | [![Linux][Linux-badge]][Linux] | [![Mac OS][Mac OS-badge]][Mac OS] | [![Docker Status][Docker Status-badge]][Docker Status] |
+| Package / Docs | [![Documentation][Documentation-badge]][Documentation] | [![PyPI][pypi-badge]][pypi] | [![is wheel][wheel-badge]][pypi] | ![github license][github-license] |
+| Tests | [![CodeFactor][Codefactor-badge]][Codefactor] | [![Coverage Status][Coverage-Status-badge]][Coverage-Status] | [![codecov][codecov-badge]][codecov] | [![After Market][After Market-badge]][After Market] |
 
 ## What is PKScreener?
 | Telegram Alerts | Nifty AI Prediction | Scheduling Cron Jobs | On-Demand Telegram Bot | Backtesting / Growth of 10k|
@@ -31,10 +33,9 @@
 pkscreener is totally customizable and it can screen stocks with the settings that you have provided.
 
 You can get daily scan results/alerts at scheduled times by subscribing to the following Telegram channel:
-|    Purpose     |                                                                                                                   Description/link                                                                                                                    | QR Code                                                                                                                                          |                                                                                                                                            |     |
-| :------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | --- |
-| Alerts Channel | https://t.me/PKScreener > You wil receive all the major alerts on this telegram channel. These alerts are sent for all major strategy scans daily around 9:30am-10:15am and then around 4pm. You will also receive the next day's market predictions. | <img src="https://raw.githubusercontent.com/pkjmesra/PKScreener/main/screenshots/Telegram_Channel_Prod.jpg" alt="Telegram Channel" width="100"/> |                                                                                                                                            |     |
-|      |
+|    Purpose     |                                                                                                                   Description/link                                                                                                                    | QR Code                                                                                                                                          |
+| :------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Alerts Channel | https://t.me/PKScreener > You wil receive all the major alerts on this telegram channel. These alerts are sent for all major strategy scans daily around 9:30am-10:15am and then around 4pm. You will also receive the next day's market predictions. | <img src="https://raw.githubusercontent.com/pkjmesra/PKScreener/main/screenshots/Telegram_Channel_Prod.jpg" alt="Telegram Channel" width="500"/> |
 
 ![telegram](https://raw.githubusercontent.com/pkjmesra/PKScreener/main/screenshots/telegram.png)
 
@@ -144,8 +145,23 @@ Multiple pre-defined piped scanners
 # Using docker, running within docker container
 * Download and install docker desktop: https://docs.docker.com/get-docker/
 * After installation, launch/run docker desktop and if it asks, login using your docker credentials.
-* Launch any command line (for example, cmd on windows or terminal on Mac) and type `docker pull pkjmesra/pkscreener:latest`. Then type `docker run -it pkjmesra/pkscreener:latest`.  
+* Launch any command line (for example, cmd on windows or terminal on Mac) and type 
+```
+docker pull pkjmesra/pkscreener:latest
+```
+Then type 
+```
+docker run -it pkjmesra/pkscreener:latest
+```
 The option `-i` will open the `pkscreener` in interactive mode within docker. `-t` will allocate a pseudo terminal for you so you can begin to use `pkscreener`
+
+# Special notes on vulnerabilities shown in the docker image/container
+Please keep in mind that only because the container/image shows a vulnerability, it does not mean that it exists in this particular image.
+1. If you see a critical vulnerability being shown for git, it's ONLY IF we use git with v2.13 or below AND we use git submodule. In case of PKScreener, both are false. We use git >= 2.45 and we DO NOT use git submodules. See https://nvd.nist.gov/vuln/detail/CVE-2024-32002
+2. If you see high severity vulnerability for pip, it's ONLY IF we use a private indexed repository. In our case, we only use PyPi - a public python library repository. See https://nvd.nist.gov/vuln/detail/CVE-2018-20225.
+3. If you see high severity vulnerability for usage of library Pillow, it's ONLY IF we try to generate an image containing text that can uncontrollably lengthy. In PKScreener, the image is NEVER generated locally on your laptop or docker container. It is generated only when running in telegram-bot for morning/afternoon analysis alerts. Additionally, there are checks to ensure we never go beyond the maximum size of the number of columns in the analysis tables. To conclude, the image generation module never gets activated on docker/locally on your laptop. See https://nvd.nist.gov/vuln/detail/CVE-2023-44271
+
+The story is similar for other low severity vulnerabilities that docker might show. If you're genuinely concerned, you can search with the respective CVE # in the NIST database to understand more or create an issue https://github.com/pkjmesra/PKScreener/issues . We keep reviewing all vulnerabilties regularly and fix those immediately if at all they are likely to impact us or our users.
 
 # Installing the latest version from PyPi.
 * Go ahead and install using `pip install pkscreener`. The releases page also has the latest wheels for multiple platforms.
@@ -296,11 +312,11 @@ After you have finished the run, go to that copied path, zip the contents of the
 [MADE-IN-INDIA-badge]: https://img.shields.io/badge/MADE%20WITH%20%E2%9D%A4%20IN-INDIA-orange
 [MADE-IN-INDIA]: https://en.wikipedia.org/wiki/India
 [Windows-badge]: https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white
-[Windows]: https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240604.437/pkscreenercli.exe
+[Windows]: https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240606.440/pkscreenercli.exe
 [Linux-badge]: https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black
-[Linux]: https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240604.437/pkscreenercli.bin
+[Linux]: https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240606.440/pkscreenercli.bin
 [Mac OS-badge]: https://img.shields.io/badge/mac%20os-D3D3D3?logo=apple&logoColor=000000
-[Mac OS]: https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240604.437/pkscreenercli.run
+[Mac OS]: https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240606.440/pkscreenercli.run
 [GitHub release (latest by date)-badge]: https://img.shields.io/github/v/release/pkjmesra/PKScreener
 [GitHub release (latest by date)]: https://github.com/pkjmesra/PKScreener/releases/latest
 [pypi-badge]: https://img.shields.io/pypi/v/pkscreener.svg?style=flat-square
