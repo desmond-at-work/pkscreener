@@ -41,6 +41,10 @@ from PKDevTools.classes.PKDateUtilities import PKDateUtilities
 from PKDevTools.classes.MarketHours import MarketHours
 from PKDevTools.classes.log import default_logger
 from PKDevTools.classes.OutputControls import OutputControls
+from PKDevTools.classes.SuppressOutput import SuppressOutput
+from PKDevTools.classes.MarketHours import MarketHours
+
+configManager = tools()
 
 STD_ENCODING=sys.stdout.encoding if sys.stdout is not None else 'utf-8'
 
@@ -91,10 +95,13 @@ class PKMarketOpenCloseAnalyser:
         # stockListFromMorningTrade,morningIntraday_df = PKMarketOpenCloseAnalyser.simulateMorningTrade(updatedCandleData)
         # latest_daily_df = PKMarketOpenCloseAnalyser.runScanForStocksFromMorningTrade(stockListFromMorningTrade,allDailyCandles)
         try:
-            PKMarketOpenCloseAnalyser.diffMorningCandleDataWithLatestDailyCandleData(screen_df,save_df, updatedCandleData, allDailyCandles,runOptionName=runOptionName,filteredListOfStocks=filteredListOfStocks)
+            shouldSuppress = not OutputControls().enableMultipleLineOutput
+            with SuppressOutput(suppress_stderr=shouldSuppress, suppress_stdout=shouldSuppress):
+                save_df, screen_df = PKMarketOpenCloseAnalyser.diffMorningCandleDataWithLatestDailyCandleData(screen_df,save_df, updatedCandleData, allDailyCandles,runOptionName=runOptionName,filteredListOfStocks=filteredListOfStocks)
         except:
             pass
         Utility.tools.saveStockData(allDailyCandles,PKMarketOpenCloseAnalyser.configManager,1,False,False, True)
+        return save_df, screen_df
 
     def ensureIntradayStockDataExists():
         # Ensure that the intraday_stock_data_<date>.pkl file exists
@@ -102,7 +109,7 @@ class PKMarketOpenCloseAnalyser:
         copyFilePath = os.path.join(Archiver.get_user_outputs_dir(), f"copy_{cache_file}")
         srcFilePath = os.path.join(Archiver.get_user_outputs_dir(), cache_file)
         srcFileSize = os.stat(srcFilePath).st_size if os.path.exists(srcFilePath) else 0
-        if exists and srcFileSize < 1024*1024*50:
+        if exists and srcFileSize < 1024*1024*40:
              # File less than 30MB ? Must have been corrupted
             try:
                 os.remove(srcFilePath)
@@ -116,6 +123,11 @@ class PKMarketOpenCloseAnalyser:
             PKMarketOpenCloseAnalyser.configManager.duration = "1m"
             OutputControls().printOutput(f"[+] {colorText.FAIL}{cache_file}{colorText.END} not found under {Archiver.get_user_outputs_dir()} !")
             OutputControls().printOutput(f"[+] {colorText.GREEN}Trying to download {cache_file}{colorText.END}. Please wait ...")
+            if os.path.exists(copyFilePath):
+                copyFileSize = os.stat(copyFilePath).st_size if os.path.exists(copyFilePath) else 0
+                if copyFileSize >= 1024*1024*40:
+                    shutil.copy(copyFilePath,srcFilePath) # copy is the saved source of truth
+                    return True, cache_file
             Utility.tools.loadStockData({},PKMarketOpenCloseAnalyser.configManager,False,'Y',False,False,[],isIntraday=True)
             exists, cache_file = Utility.tools.afterMarketStockDataExists(intraday=True)
             if not exists:
@@ -139,7 +151,7 @@ class PKMarketOpenCloseAnalyser:
         copyFilePath = os.path.join(Archiver.get_user_outputs_dir(), f"copy_{cache_file}")
         srcFilePath = os.path.join(Archiver.get_user_outputs_dir(), cache_file)
         srcFileSize = os.stat(srcFilePath).st_size if os.path.exists(srcFilePath) else 0
-        if exists and srcFileSize < 1024*1024*50:
+        if exists and srcFileSize < 1024*1024*40:
              # File less than 30MB ? Must have been corrupted
             try:
                 os.remove(srcFilePath)
@@ -151,6 +163,11 @@ class PKMarketOpenCloseAnalyser:
         # We should download a fresh copy anyways because we may have altered the existing copy in
         # the previous run. -- !!!! Not required if we saved at the end of last operation !!!!
             OutputControls().printOutput(f"[+] {colorText.GREEN}Trying to download {cache_file}{colorText.END}. Please wait ...")
+            if os.path.exists(copyFilePath):
+                copyFileSize = os.stat(copyFilePath).st_size if os.path.exists(copyFilePath) else 0
+                if copyFileSize >= 1024*1024*40:
+                    shutil.copy(copyFilePath,srcFilePath) # copy is the saved source of truth
+                    return True, cache_file
             Utility.tools.loadStockData({},PKMarketOpenCloseAnalyser.configManager,False,'Y',False,False,[],isIntraday=False,forceRedownload=True)
             exists, cache_file = Utility.tools.afterMarketStockDataExists(intraday=False)
             if not exists:
@@ -303,6 +320,17 @@ class PKMarketOpenCloseAnalyser:
         save_df.drop(f"index", axis=1, inplace=True, errors="ignore")
         screen_df.drop(f"index", axis=1, inplace=True, errors="ignore")
         stocks = save_df["Stock"]
+        filterStocks = []
+        for stock in stocks:
+            if stock in filteredListOfStocks:
+                filterStocks.append(stock)
+        stocks = filterStocks
+        save_df = save_df[save_df['Stock'].isin(filteredListOfStocks)]
+        df_screenResults = None
+        for stk in filteredListOfStocks:
+            df_screenResults_filter = screen_df[screen_df['Stock'].astype(str).str.contains(f"NSE%3A{stk}") == True]
+            df_screenResults = pd.concat([df_screenResults, df_screenResults_filter], axis=0)
+        screen_df = df_screenResults
         eodLTPs = []
         dayHighLTPs = []
         morningTimestamps = []
@@ -314,6 +342,8 @@ class PKMarketOpenCloseAnalyser:
         dayHighDiffs = []
         sqrOffDiffs = []
         index = 0
+        ts = None
+        row = None
         scrStats = ScreeningStatistics(PKMarketOpenCloseAnalyser.configManager, default_logger())
         for stock in stocks:
             try:
@@ -338,6 +368,25 @@ class PKMarketOpenCloseAnalyser:
                                            afterTimestamp=updatedCandleData[stock]["index"][-1],
                                            nthCrossover=1,
                                            upDirection=True)
+                # saveDictionary = {}
+                # screeningDictionary = {}
+                # nextSellMinute = 1
+                # foundNextSellCandle = False
+                # index = None
+                # while not foundNextSellCandle:
+                #     try:
+                #         # Let's only consider those candles that are right after the alert issue-time in the mornings
+                #         index = pd.to_datetime(f'{PKDateUtilities.tradingDate().strftime(f"%Y-%m-%d")} {MarketHours().openHour:02}:{MarketHours().openMinute+PKMarketOpenCloseAnalyser.configManager.morninganalysiscandlenumber+nextSellMinute}:00+05:30').to_datetime64()
+                #         df = df[df.index <=  index]
+                #     except:
+                #         index = pd.to_datetime(f'{PKDateUtilities.tradingDate().strftime(f"%Y-%m-%d")} {MarketHours().openHour:02}:{MarketHours().openMinute+PKMarketOpenCloseAnalyser.configManager.morninganalysiscandlenumber+nextSellMinute}:00+05:30', utc=True)
+                #         df = df[df.index <=  index]
+                #         pass
+                #     foundNextSellCandle = scrStats.findATRTrailingStops(df=df,sensitivity=configManager.atrTrailingStopSensitivity, atr_period=configManager.atrTrailingStopPeriod,ema_period=configManager.atrTrailingStopEMAPeriod,buySellAll=2,saveDict=saveDictionary,screenDict=screeningDictionary)
+                #     nextSellMinute += 1
+                # if foundNextSellCandle:
+                #     ts = df.tail(len(df)-index +1).head(1).index[-1]
+                #     row = df[df.index == ts]
                 highTS, highRow = scrStats.findIntradayHighCrossover(df=df)
                 # buySell_df = scrStats.computeBuySellSignals(updatedCandleData[stock]["data"])
                 # OutputControls().printOutput(buySell_df)
@@ -360,21 +409,22 @@ class PKMarketOpenCloseAnalyser:
                 continue
         diffColumns = ["LTP@Alert", "AlertTime", "SqrOff", "SqrOffLTP", "SqrOffDiff","DayHighTime","DayHigh","DayHighDiff", "EoDLTP", "EoDDiff"]
         diffValues = [morningAlertLTPs, morningTimestamps, sellTimestamps, sellLTPs, sqrOffDiffs,dayHighTimestamps,dayHighLTPs, dayHighDiffs,eodLTPs, eodDiffs]
-        for col in diffColumns:
-            save_df[col] = diffValues[diffColumns.index(col)]
-            screen_df.loc[:, col] = save_df.loc[:, col].apply(
-                lambda x: x if col in ["LTP@Alert","AlertTime", "SqrOff", "SqrOffLTP", "EoDLTP","DayHigh","DayHighTime"] else ((colorText.GREEN if x >= 0 else colorText.FAIL) + str(x) + colorText.END)
+        for column in diffColumns:
+            columnName = column
+            save_df[columnName] = diffValues[diffColumns.index(columnName)]
+            screen_df.loc[:, columnName] = save_df.loc[:, columnName].apply(
+                lambda x: x if columnName in ["LTP@Alert","AlertTime", "SqrOff", "SqrOffLTP", "EoDLTP","DayHigh","DayHighTime"] else ((colorText.GREEN if x >= 0 else colorText.FAIL) + str(x) + colorText.END)
             )
 
         columns = save_df.columns
         lastIndex = len(save_df)
         for col in columns:
-            if col in ["Stock", "Pattern", "LTP", "SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff", "EoDLTP", "EoDDiff", "%Chng"]:
+            if col in ["Stock", "LTP@Alert", "Pattern", "LTP", "SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff", "EoDLTP", "EoDDiff", "%Chng"]:
                 if col == "Stock":
                     save_df.loc[lastIndex,col] = "PORTFOLIO"
                 elif col == "Pattern":
                     save_df.loc[lastIndex,col] = runOptionName if runOptionName is not None else ""
-                elif col in ["LTP", "SqrOffLTP","SqrOffDiff", "EoDLTP", "EoDDiff","DayHigh","DayHighDiff"]:
+                elif col in ["LTP", "LTP@Alert", "SqrOffLTP","SqrOffDiff", "EoDLTP", "EoDDiff","DayHigh","DayHighDiff"]:
                     save_df.loc[lastIndex,col] = round(sum(save_df[col].dropna(inplace=False).astype(float)),2)
                 elif col == "%Chng":
                     ltpSum = sum(save_df["LTP"].dropna(inplace=False).astype(float))
@@ -397,7 +447,11 @@ class PKMarketOpenCloseAnalyser:
         PKMarketOpenCloseAnalyser.allIntradayCandles = None
         screen_df.replace(np.nan, "", regex=True)
         save_df.replace(np.nan, "", regex=True)
-        if 'index' in save_df.columns:
-            save_df.drop('index', axis=1, inplace=True, errors="ignore")
-        if 'index' in screen_df.columns:
-            screen_df.drop('index', axis=1, inplace=True, errors="ignore")
+        # Drop the unnecessary columns for this scanner type to make way for other columns to be fitted nicely on screen
+        columnsToBeDropped = ["Breakout(22Prds)","MA-Signal","Trend(22Prds)","index","EoDLTP"]
+        for col in columnsToBeDropped:
+            if col in save_df.columns:
+                save_df.drop(col, axis=1, inplace=True, errors="ignore")
+            if col in screen_df.columns:
+                screen_df.drop(col, axis=1, inplace=True, errors="ignore")
+        return save_df, screen_df

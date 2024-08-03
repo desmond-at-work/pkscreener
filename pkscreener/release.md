@@ -1,22 +1,12 @@
 [![MADE-IN-INDIA](https://img.shields.io/badge/MADE%20WITH%20%E2%9D%A4%20IN-INDIA-orange?style=for-the-badge)](https://en.wikipedia.org/wiki/India) [![GitHub release (latest by date)](https://img.shields.io/github/v/release/pkjmesra/PKScreener?style=for-the-badge)](#) [![GitHub all releases](https://img.shields.io/github/downloads/pkjmesra/PKScreener/total?color=Green&label=Downloads&style=for-the-badge)](#) [![MADE_WITH](https://img.shields.io/badge/BUILT%20USING-PYTHON-yellow?style=for-the-badge&logo=python&logoColor=yellow)](https://www.python.org/)
 
 ## What's New?
-1. [v0.45.20240608.446] release
-* Sound alerts for configured options in pkscreener.ini when running in monitoring mode (option -m)
-* Moved the telegram image quality/size and compression parameters to pkscreener.ini to make it configurable and under control.
-* Defined configurable option for sleep interval between data fetches for pinned scanners. Check out pinnedmonitorsleepintervalseconds value in pkscreener.ini config file.
-* Defined configurable market-open and close hour:minute in pkscreener.ini config file so that if you would like pre-open-market-data as well, you can configure it and run it locally.
-* Fixed a bug for piped scanners wherein after being pinned, it was not updating the data regularly.
-* Docker builds for multi-arch fixed. Now you have docker build targeted at amd64, arm/v7 as well as arm64 architectures. Download docker desktop now and run with "docker run -it pkjmesra/pkscreener:latest" Enjoy!
-* Added a Quick Backtest Mode (Try T > B followed by the n-th day/candle) for which you'd like to get the maximum potential profitability analysis.
-* Added many new pre-defined piped scanner
-* Modified ATR trailing stop scanner to get better results. Try X > 12 > 30.
-* Telegram bot reverted back to the older non-LGPL licensed version
-* Moved a number of columns to always-hidden-columns in the pkscreener.ini config file. You can edit it to show the hidden columns on your console.
-* Now set how many results you want displayed by changing the number maxdisplayresults in pkscreener.ini
-* Run scans over the index, by choosing index option 0 and providing the index symbol like ^NSEI etc. You should know the index symbol on your own(Yahoo finance?) and it must start with ^
-* You can now pin the just-finished-scan even when the result count is zero.
-* NOTE: To fit all result columns on your screen, switch to smaller font size in your console.
+1. [v0.45.20240802.477] release
+* Bullish anchored VWAP implemented under X > 12 > 34. Added these along with VCP in pre-defined piped scanners as well under option 22/23.
+* Potential profitable setups (Try menu option 33. X > 12 > 33) with condtions such that 200 MA is rising for at least 3 months, 50 MA is above 200MA, Current price is above 20Osma and preferably above 50 to 100, Current price is at least above 100 % from 52week low, the stock should have made a 52 week high at least once every 4 to 6 month.
+* Super confluence option modified to be configurable. In the pkscreener.ini filoe, you can configure which EMAs you would like to have super-confluence tested with. For example, by default it is 8,21,55 but you can change superconfluenceemaperiods to 10,20,55 as well. Similarly, change superconfluencemaxreviewdays to suitable number of days within which you would like the tool to review for super-confluence. By default it is set to 3 days. (8/10 EMA >= 21/20 EMA >= 55 EMA >= 200 SMA within 0-2%). Try X > 12 > 7 > 3 > Option 4.
+* Intraday Breakout setup at Day Open (open==low or high with open/close >< previous day high/low price) : Try the X > 12 > 32 option with Buy, Sell or All options.
+* Sectoral Indices integrated. Try X > S. Then go on and select whichever scanner menu you would like to select.
 
 ## Older Releases
 * [https://github.com/pkjmesra/PKScreener/releases] : Discarded to save on storage costs!
@@ -24,9 +14,9 @@
 ## Downloads
 | Operating System                                                                                         | Executable File                                                                                                                                                                                                               |
 | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | **[pkscreenercli.exe](https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240608.446/pkscreenercli.exe)**                                                                                                         |
-| ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)       | **[pkscreenercli.bin](https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240608.446/pkscreenercli.bin)**                                                                                                         |
-| ![Mac OS](https://img.shields.io/badge/mac%20os-D3D3D3?style=for-the-badge&logo=apple&logoColor=000000)  | **[pkscreenercli.run](https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240608.446/pkscreenercli.run)** ([Read Installation Guide](https://github.com/pkjmesra/PKScreener/blob/main/INSTALLATION.md#for-macos)) |
+| ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | **[pkscreenercli.exe](https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240802.477/pkscreenercli.exe)**                                                                                                         |
+| ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)       | **[pkscreenercli.bin](https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240802.477/pkscreenercli.bin)**                                                                                                         |
+| ![Mac OS](https://img.shields.io/badge/mac%20os-D3D3D3?style=for-the-badge&logo=apple&logoColor=000000)  | **[pkscreenercli.run](https://github.com/pkjmesra/PKScreener/releases/download/0.45.20240802.477/pkscreenercli.run)** ([Read Installation Guide](https://github.com/pkjmesra/PKScreener/blob/main/INSTALLATION.md#for-macos)) |
 
 ## How to use?
 

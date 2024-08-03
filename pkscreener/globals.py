@@ -80,6 +80,7 @@ from pkscreener.classes.MenuOptions import (
     level4_X_ChartPattern_Confluence_MenuDict,
     level4_X_ChartPattern_BBands_SQZ_MenuDict,
     level4_X_ChartPattern_MASignalMenuDict,
+    level1_index_options_sectoral,
     menus,
     MAX_SUPPORTED_MENU_OPTION,
     MAX_MENU_OPTION,
@@ -139,6 +140,7 @@ results_queue = None
 consumers = None
 logging_queue = None
 mp_manager = None
+analysis_dict = {}
 download_trials = 0
 
 def startMarketMonitor(mp_dict,keyboardevent):
@@ -589,7 +591,8 @@ def initPostLevel0Execution(
 
 
 def initPostLevel1Execution(indexOption, executeOption=None, skip=[], retrial=False):
-    global selectedChoice, userPassedArgs
+    global selectedChoice, userPassedArgs, listStockCodes
+    listStockCodes = [] if listStockCodes is None or len(listStockCodes) == 0 else listStockCodes
     if executeOption is None:
         if indexOption is not None and indexOption != "W":
             Utility.tools.clearScreen()
@@ -605,6 +608,23 @@ def initPostLevel1Execution(indexOption, executeOption=None, skip=[], retrial=Fa
             )
             selectedMenu = m1.find(indexOption)
             m2.renderForMenu(selectedMenu=selectedMenu, skip=skip)
+            stockIndexCode = "18"
+            if indexOption == "S":
+                indexKeys = level1_index_options_sectoral.keys()
+                stockIndexCode = input(
+                    colorText.BOLD + colorText.FAIL + "[+] Select option: "
+                ) or str(len(indexKeys))
+                OutputControls().printOutput(colorText.END, end="")
+                
+                if stockIndexCode == str(len(indexKeys)):
+                    for indexCode in indexKeys:
+                        if indexCode != str(len(indexKeys)):
+                            listStockCodes.append(level1_index_options_sectoral[str(indexCode)].split("(")[1].split(")")[0])
+                else:
+                    listStockCodes = [level1_index_options_sectoral[str(stockIndexCode)].split("(")[1].split(")")[0]]
+                selectedMenu.menuKey = "0" # Reset because user must have selected specific index menu with single stock
+                Utility.tools.clearScreen()
+                m2.renderForMenu(selectedMenu=selectedMenu, skip=skip)
     try:
         needsCalc = userPassedArgs is not None and userPassedArgs.backtestdaysago is not None
         pastDate = f"[+] [ Running in Quick Backtest Mode for {colorText.WARN}{PKDateUtilities.nthPastTradingDateStringFromFutureDate(int(userPassedArgs.backtestdaysago) if needsCalc else 0)}{colorText.END} ]\n" if needsCalc else ""
@@ -644,6 +664,8 @@ def initPostLevel1Execution(indexOption, executeOption=None, skip=[], retrial=Fa
 def labelDataForPrinting(screenResults, saveResults, configManager, volumeRatio,executeOption, reversalOption):
     # Publish to gSheet with https://github.com/burnash/gspread
     global menuChoiceHierarchy, userPassedArgs
+    if saveResults is None:
+        return
     try:
         isTrading = PKDateUtilities.isTradingTime() and not PKDateUtilities.isTodayHoliday()[0]
         if "RUNNER" not in os.environ.keys() and (isTrading or userPassedArgs.monitor or ("RSIi" in saveResults.columns)) and configManager.calculatersiintraday:
@@ -662,8 +684,12 @@ def labelDataForPrinting(screenResults, saveResults, configManager, volumeRatio,
                 ascending = [reversalOption in [9]]
         elif executeOption == 7:
             if reversalOption in [3]:
-                sortKey = ["Volume","MA-Signal"]
-                ascending = [False, False]
+                if "SuperConfSort" in saveResults.columns:
+                    sortKey = ["MA-Signal", "SuperConfSort"]
+                    ascending = [True, True]
+                else:
+                    sortKey = ["Volume","MA-Signal"]
+                    ascending = [False, False]
         elif executeOption == 23:
             sortKey = ["bbands_ulr_ratio_max5"] if "bbands_ulr_ratio_max5" in screenResults.columns else ["Volume"]
             ascending = [False]
@@ -688,6 +714,10 @@ def labelDataForPrinting(screenResults, saveResults, configManager, volumeRatio,
             default_logger().debug(e, exc_info=True)
             pass
         columnsToBeDeleted = ["MFI","FVDiff","ConfDMADifference","bbands_ulr_ratio_max5", "RSIi"]
+        if "EoDDiff" in saveResults.columns:
+            columnsToBeDeleted.extend(["Trend","Breakout"])
+        if "SuperConfSort" in saveResults.columns:
+            columnsToBeDeleted.extend(["SuperConfSort"])
         if userPassedArgs is not None and userPassedArgs.options is not None and userPassedArgs.options.upper().startswith("C"):
             columnsToBeDeleted.append("FairValue")
         if executeOption == 27 and "ATR" in screenResults.columns: # ATR Cross
@@ -734,6 +764,11 @@ def isInterrupted():
     global keyboardInterruptEventFired
     return keyboardInterruptEventFired
 
+def resetUserMenuChoiceOptions():
+    global menuChoiceHierarchy, userPassedArgs
+    menuChoiceHierarchy = ""
+    userPassedArgs.pipedtitle = ""
+
 def refreshStockData(startupoptions=None):
     global consumers,stockDictPrimary, loadedStockData, listStockCodes, stockDictSecondary
     options = startupoptions.replace("|","").split(" ")[0].replace(":i","")
@@ -754,7 +789,7 @@ def closeWorkersAndExit():
     
 # @tracelog
 def main(userArgs=None,optionalFinalOutcome_df=None):
-    global mp_manager, listStockCodes, screenResults, selectedChoice, defaultAnswer, menuChoiceHierarchy, screenCounter, screenResultsCounter, stockDictPrimary, stockDictSecondary, userPassedArgs, loadedStockData, keyboardInterruptEvent, loadCount, maLength, newlyListedOnly, keyboardInterruptEventFired,strategyFilter, elapsed_time, start_time
+    global analysis_dict, mp_manager, listStockCodes, screenResults, selectedChoice, defaultAnswer, menuChoiceHierarchy, screenCounter, screenResultsCounter, stockDictPrimary, stockDictSecondary, userPassedArgs, loadedStockData, keyboardInterruptEvent, loadCount, maLength, newlyListedOnly, keyboardInterruptEventFired,strategyFilter, elapsed_time, start_time
     selectedChoice = {"0": "", "1": "", "2": "", "3": "", "4": ""}
     elapsed_time = 0
     start_time = 0
@@ -769,6 +804,13 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
     strategyFilter=[]
     if keyboardInterruptEventFired:
         return None, None
+    
+    if userPassedArgs.runintradayanalysis and "C:" in startupoptions and "|" in startupoptions:
+        firstScanKey = startupoptions.split(">|")[0]
+        if firstScanKey.startswith("X:12:") and firstScanKey in analysis_dict.keys():
+            savedAnalysisDict = analysis_dict.get(firstScanKey)
+            return analysisFinalResults(savedAnalysisDict.get("S1"),savedAnalysisDict.get("S2"),optionalFinalOutcome_df)
+
     screenCounter = multiprocessing.Value("i", 1)
     screenResultsCounter = multiprocessing.Value("i", 0)
     if mp_manager is None:
@@ -1084,7 +1126,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 elif defaultAnswer == "Y" and user is not None:
                     # bot mode
                     insideBarToLookback = 7 if respChartPattern in [1, 2] else 0.02
-                    maLength = 1 if respChartPattern in [3] else 0
+                    maLength = 4 if respChartPattern in [3] else 0
                 else:
                     (
                         respChartPattern,
@@ -1116,6 +1158,18 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             )
             if maLength == 0 and respChartPattern in [1, 2, 3, 6, 9]:
                 maLength = Utility.tools.promptChartPatternSubMenu(selectedMenu, respChartPattern)
+            if maLength == 4 and respChartPattern == 3: # Super-confluence setup
+                configManager.superConfluenceMaxReviewDays = input(
+                    f"[+] Max number of review days for super-confluence-checks. (number)(Optimal = 3-7, Current: {colorText.FAIL}{configManager.superConfluenceMaxReviewDays}{colorText.END}): "
+                ) or configManager.superConfluenceMaxReviewDays
+                configManager.superConfluenceEMAPeriods = input(
+                    f"[+] Comma separated EMA periods for super-confluence-crossovers in the same order. (numbers)(Optimal = 8,21,55, Current: {colorText.FAIL}{configManager.superConfluenceEMAPeriods}{colorText.END}): "
+                ) or configManager.superConfluenceEMAPeriods
+                enable200SMA = input(
+                    f"[+] Enable enforcing SMA-200 check for super-confluence? When enabled, at least one of 8/21/55-EMA should be lower than SMA-200 [Y/N, Current: {colorText.FAIL}{'y' if configManager.superConfluenceEnforce200SMA else 'n'}{colorText.END}]: "
+                ) or ('y' if configManager.superConfluenceEnforce200SMA else 'n')
+                configManager.superConfluenceEnforce200SMA = False if "y" not in str(enable200SMA).lower() else True
+                configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
         if (
             respChartPattern is None
             or insideBarToLookback is None
@@ -1200,6 +1254,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                     menuChoiceHierarchy,
                     False,
                     None,
+                    executeOption
                 )
                 if defaultAnswer is None:
                     input("Press <Enter> to continue...")
@@ -1231,6 +1286,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 menuChoiceHierarchy,
                 False,
                 None,
+                executeOption
             )
             if defaultAnswer is None:
                 input("Press <Enter> to continue...")
@@ -1260,7 +1316,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             sendMessageToTelegramChannel(message=message, user=userPassedArgs.user)
         return None, None
     
-    if executeOption == 30:
+    if executeOption == 30 or executeOption == 32:
         selectedMenu = m2.find(str(executeOption))
         if len(options) >= 4:
             if str(options[3]).isnumeric():
@@ -1277,6 +1333,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             return None, None
         else:
             selectedChoice["3"] = str(maLength)
+    if executeOption == 30:
         if userPassedArgs.options is None:
             Utility.tools.clearScreen(forceTop=True)
             atrSensitivity = input(colorText.WARN + f"Enter the ATR Trailing Stop Sensitivity (Multiplier) value (Optimal:1, Current={configManager.atrTrailingStopSensitivity}):") or configManager.atrTrailingStopSensitivity
@@ -1289,11 +1346,14 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
         # Ensure we have the template JSONs from vectorBt
         screener.shouldLog = userPassedArgs.log
         screener.computeBuySellSignals(None)
-
+    if executeOption == 34:
+        if userPassedArgs.options is None:
+            configManager.anchoredAVWAPPercentage = input(colorText.WARN + f"Enter the anchored-VWAP percentage gap from close price (Optimal:1, Current={configManager.anchoredAVWAPPercentage}):") or configManager.anchoredAVWAPPercentage
+            configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
     if executeOption == 42:
         Utility.tools.getLastScreenedResults(defaultAnswer)
         return None, None
-    if executeOption >= MAX_SUPPORTED_MENU_OPTION and executeOption <= MAX_MENU_OPTION:
+    if executeOption > MAX_SUPPORTED_MENU_OPTION and executeOption < MAX_MENU_OPTION:
         OutputControls().printOutput(
             colorText.BOLD
             + colorText.FAIL
@@ -1303,7 +1363,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
         input("Press <Enter> to continue...")
         return None, None
     if (
-        not str(indexOption).isnumeric() and indexOption in ["W", "E", "M", "N", "Z"]
+        not str(indexOption).isnumeric() and indexOption in ["W", "E", "M", "N", "Z", "S"]
     ) or (
         str(indexOption).isnumeric()
         and (int(indexOption) >= 0 and int(indexOption) < 16)
@@ -1363,7 +1423,8 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                         return None, None
                     if indexOption > 0:
                         listStockCodes = sorted(list(filter(None,list(set(stockDictPrimary.keys())))))
-                listStockCodes = prepareStocksForScreening(testing, downloadOnly, listStockCodes, indexOption)
+                if str(indexOption) not in ["S"]:
+                    listStockCodes = prepareStocksForScreening(testing, downloadOnly, listStockCodes, indexOption)
         except urllib.error.URLError as e:
             default_logger().debug(e, exc_info=True)
             OutputControls().printOutput(
@@ -1461,7 +1522,8 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 consumers = None
             if menuOption in ["C"]:
                 runOptionName = PKScanRunner.getFormattedChoices(userPassedArgs,selectedChoice)
-                PKMarketOpenCloseAnalyser.runOpenCloseAnalysis(stockDictPrimary,endOfdayCandles,screenResults, saveResults,runOptionName=runOptionName,filteredListOfStocks=listStockCodes)
+                if saveResults is not None and not saveResults.empty:
+                    saveResults, screenResults = PKMarketOpenCloseAnalyser.runOpenCloseAnalysis(stockDictPrimary,endOfdayCandles,screenResults, saveResults,runOptionName=runOptionName,filteredListOfStocks=listStockCodes)
             if downloadOnly and menuOption in ["X"]:
                 screener.getFreshMFIStatus(stock="LatestCheckedOnDate")
                 screener.getFairValue(stock="LatestCheckedOnDate", force=True)
@@ -1520,6 +1582,9 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                     corp_dfs = [dividend_df, bonus_df, stockSplit_df]
                     shareable_strings = []
                     shouldSend = False
+                    corp_columns = ["Div.Date","Ratio","Record","Split","OldFV","NewFV"]
+                    caption_df = None
+                    caption_results = ""
                     for corp_df in corp_dfs:
                         if corp_df is None:
                             continue
@@ -1534,16 +1599,37 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                                 # showindex = False,
                                 maxcolwidths=Utility.tools.getMaxColumnWidths(dividend_df)
                             ).encode("utf-8").decode(STD_ENCODING)
+                            
+                            if corp_columns[0] in corp_df.columns:
+                                caption_df = corp_df[[corp_columns[0]]]
+                            elif corp_columns[1] in corp_df.columns:
+                                caption_df = corp_df[[corp_columns[1],corp_columns[2]]]
+                            elif corp_columns[3] in corp_df.columns:
+                                caption_df = corp_df[[corp_columns[3],corp_columns[4],corp_columns[5]]]
+                                with pd.option_context('mode.chained_assignment', None):
+                                    caption_df["FV"] = caption_df[corp_columns[4]].astype(str) + ":" + caption_df[corp_columns[5]].astype(str)
+                                    caption_df = caption_df[[corp_columns[3],"FV"]]
+                            if caption_df is not None:
+                                # caption_df.reset_index(inplace=True)
+                                caption_df = caption_df.head(3)
+                                caption_results = caption_results + "\n" + colorText.miniTabulator().tabulate(
+                                    caption_df,
+                                    headers="keys",
+                                    tablefmt=colorText.No_Pad_GridFormat,
+                                    maxcolwidths=None
+                                    ).encode("utf-8").decode(STD_ENCODING).replace("-K-----S-----C-----R","-K-----S----C---R").replace("%  ","% ").replace("=K=====S=====C=====R","=K=====S====C===R").replace("Vol  |","Vol|").replace("Hgh  |","Hgh|").replace("EoD  |","EoD|").replace("x  ","x")
                             shouldSend = True
                         shareable_strings.append(tab_results)
                         OutputControls().printOutput(tab_results)
                     if shouldSend:
+                        caption_results = Utility.tools.removeAllColorStyles(caption_results.replace("-E-----N-----E-----R","-E-----N----E---R").replace("=E=====N=====E=====R","=E=====N====E===R"))
+                        caption = f"Stocks with dividends/bonus/splits. Samples:<pre>{caption_results}</pre>" #<i>Author is <u><b>NOT</b> a SEBI registered financial advisor</u> and MUST NOT be deemed as one.</i>"
                         sendQuickScanResult(
                             menuChoiceHierarchy,
                             user,
                             shareable_strings[0],
                             Utility.tools.removeAllColorStyles(shareable_strings[0]),
-                            "NSE Stocks with dividends/bonus/splits soon",
+                            caption,
                             f"PKS_X_12_26_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
                             ".png",
                             addendum=shareable_strings[1],
@@ -1553,6 +1639,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                             summaryLabel = "NSE Stocks with corporate action type stock split:",
                             detailLabel = None,
                             )
+                        
                 elif "|" not in userPassedArgs.options:
                     try:
                         printNotifySaveScreenedResults(
@@ -1562,6 +1649,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                             menuChoiceHierarchy,
                             testing,
                             user=user,
+                            executeOption=executeOption
                         )
                     except Exception as e:
                         default_logger().debug(e, exc_info=True)
@@ -1643,24 +1731,39 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 os.system(f"{launcher} -a Y -m {scannerOptionQuoted}")
 
     if userPassedArgs is not None:
+        existingTitle = f"{userPassedArgs.pipedtitle}|" if userPassedArgs.pipedtitle is not None else ""
+        choiceSegments = menuChoiceHierarchy.split(">")
+        choiceSegments = f"{choiceSegments[-2]} > {choiceSegments[-1]}" if len(choiceSegments)>=4 else f"{choiceSegments[-1]}"
+        userPassedArgs.pipedtitle = f'{existingTitle}{choiceSegments}[{len(saveResults)}]'
         if userPassedArgs.runintradayanalysis:
-            analysis_df = screenResults.copy()
-            analysis_df.reset_index(inplace=True)
-            if 'index' in analysis_df.columns:
-                analysis_df.drop('index', axis=1, inplace=True, errors="ignore")
-            if optionalFinalOutcome_df is None:
-                optionalFinalOutcome_df = analysis_df
-            else:
-                optionalFinalOutcome_df = pd.concat([optionalFinalOutcome_df, analysis_df], axis=0)
-            return optionalFinalOutcome_df, saveResults
+            return analysisFinalResults(screenResults,saveResults,optionalFinalOutcome_df)
         else:
-            existingTitle = f"{userPassedArgs.pipedtitle}|" if userPassedArgs.pipedtitle is not None else ""
-            choiceSegments = menuChoiceHierarchy.split(">")
-            choiceSegments = f"{choiceSegments[-2]} > {choiceSegments[-1]}" if len(choiceSegments)>=4 else f"{choiceSegments[-1]}"
-            userPassedArgs.pipedtitle = f'{existingTitle}{choiceSegments}[{len(saveResults)}]'
             return screenResults, saveResults
 
-def loadDatabaseOrFetch(downloadOnly, listStockCodes, menuOption, indexOption):
+def analysisFinalResults(screenResults,saveResults,optionalFinalOutcome_df):
+    global analysis_dict, userPassedArgs
+    analysis_df = screenResults.copy()
+    index_columns = ["Stock","%Chng","Volume","Pattern","LTP","LTP@Alert","AlertTime","SqrOff","SqrOffLTP","SqrOffDiff","EoDDiff","DayHighTime","DayHigh","DayHighDiff"]
+    final_index_columns = []
+    firstScanKey = userPassedArgs.options.split(">|")[0]
+    for column in index_columns:
+        if column in analysis_df.columns:
+            final_index_columns.append(column)
+    analysis_df = analysis_df[final_index_columns]
+    analysis_df.reset_index(inplace=True)
+    if analysis_df is not None and 'index' in analysis_df.columns:
+        analysis_df.drop('index', axis=1, inplace=True, errors="ignore")            
+    if firstScanKey.startswith("C:"):
+        if optionalFinalOutcome_df is None:
+            optionalFinalOutcome_df = analysis_df
+        else:
+            optionalFinalOutcome_df = pd.concat([optionalFinalOutcome_df, analysis_df], axis=0)
+    
+    if firstScanKey.startswith("X:12:"):
+        analysis_dict[firstScanKey] = {"S1": screenResults, "S2": saveResults}
+    return optionalFinalOutcome_df, saveResults
+
+def loadDatabaseOrFetch(downloadOnly, listStockCodes, menuOption, indexOption): 
     global stockDictPrimary,stockDictSecondary, configManager, defaultAnswer, userPassedArgs, loadedStockData
     if menuOption not in ["C"]:
         stockDictPrimary = Utility.tools.loadStockData(
@@ -1766,6 +1869,17 @@ def addOrRunPipedMenus():
     if userPassedArgs is None or (userPassedArgs is not None and userPassedArgs.answerdefault is None):
         shouldAddMoreIntoPipe = input(colorText.FAIL + "[+] Select [Y/N] (Default:N): " + colorText.END) or 'n'
     if shouldAddMoreIntoPipe.lower() != 'y':
+        OutputControls().printOutput(
+            colorText.GREEN
+            + f"[+] Would you also like to run morning vs day close intraday analysis for this selection ?"
+            + colorText.END
+        )
+        shouldRunIntradayAnalysis = input(colorText.FAIL + "[+] Select [Y/N] (Default:N): " + colorText.END) or 'n'
+        shouldRunIntradayAnalysis = shouldRunIntradayAnalysis.lower() == 'y'
+        if shouldRunIntradayAnalysis:
+            analysisOptions = userPassedArgs.pipedmenus.split("|")
+            analysisOptions[-1] = analysisOptions[-1].replace("X:","C:")
+            userPassedArgs.pipedmenus = "|".join(analysisOptions)
         launcher = f'"{sys.argv[0]}"' if " " in sys.argv[0] else sys.argv[0]
         launcher = f"python3.11 {launcher}" if (launcher.endswith(".py\"") or launcher.endswith(".py")) else launcher
         monitorOption = f'"{userPassedArgs.pipedmenus}"'
@@ -1773,9 +1887,10 @@ def addOrRunPipedMenus():
         requestingUser = f" -u {userPassedArgs.user}" if userPassedArgs.user is not None else ""
         enableLog = f" -l" if userPassedArgs.log else ""
         backtestParam = f" --backtestdaysago {userPassedArgs.backtestdaysago}" if userPassedArgs.backtestdaysago else ""
-        OutputControls().printOutput(f"{colorText.GREEN}Launching PKScreener with piped scanners. If it does not launch, please try with the following:{colorText.END}\n{colorText.FAIL}{launcher} -a Y -e -o {scannerOptionQuoted}{requestingUser}{enableLog}{backtestParam}{colorText.END}")
+        runIntradayAnalysisParam = f" --runintradayanalysis" if shouldRunIntradayAnalysis else ""
+        OutputControls().printOutput(f"{colorText.GREEN}Launching PKScreener with piped scanners. If it does not launch, please try with the following:{colorText.END}\n{colorText.FAIL}{launcher} -a Y -e -o {scannerOptionQuoted}{requestingUser}{enableLog}{backtestParam}{runIntradayAnalysisParam}{colorText.END}")
         sleep(2)
-        os.system(f"{launcher} --systemlaunched -a Y -e -o {scannerOptionQuoted}{requestingUser}{enableLog}{backtestParam}")
+        os.system(f"{launcher} --systemlaunched -a Y -e -o {scannerOptionQuoted}{requestingUser}{enableLog}{backtestParam}{runIntradayAnalysisParam}")
         userPassedArgs.pipedmenus = None
         OutputControls().printOutput(
                 colorText.GREEN
@@ -1976,7 +2091,8 @@ def handleMonitorFiveEMA():
         return
 
 def handleRequestForSpecificStocks(options, indexOption):
-    listStockCodes = []
+    global listStockCodes
+    listStockCodes = [] if listStockCodes is None or len(listStockCodes) ==0 else listStockCodes
     strOptions = ""
     if isinstance(options, list):
         strOptions = ":".join(options).split(">")[0]
@@ -2004,7 +2120,7 @@ def handleExitRequest(executeOption):
         sys.exit(0)
 
 def handleMenu_XBG(menuOption, indexOption, executeOption):
-    if menuOption in ["X", "B", "G","C"]:
+    if menuOption in ["X", "B", "G", "C"]:
         selMenu = m0.find(menuOption)
         m1.renderForMenu(selMenu, asList=True)
         if indexOption is not None:
@@ -2081,7 +2197,7 @@ def updateMenuChoiceHierarchy():
     return menuChoiceHierarchy
 
 def printNotifySaveScreenedResults(
-    screenResults, saveResults, selectedChoice, menuChoiceHierarchy, testing, user=None
+    screenResults, saveResults, selectedChoice, menuChoiceHierarchy, testing, user=None,executeOption=None
 ):
     global userPassedArgs, elapsed_time
     if userPassedArgs.monitor is not None:
@@ -2127,6 +2243,10 @@ def printNotifySaveScreenedResults(
         ).encode("utf-8").decode(STD_ENCODING)
         copyScreenResults = screenResults.copy()
         hiddenColumns = configManager.alwaysHiddenDisplayColumns.split(",")
+        if userPassedArgs.runintradayanalysis:
+            hiddenColumns.remove("Pattern")
+        if executeOption in [33]:
+            hiddenColumns.remove("52Wk-L")
         for col in screenResults.columns:
             if col in hiddenColumns:
                 copyScreenResults.drop(col, axis=1, inplace=True, errors="ignore")
@@ -2201,17 +2321,26 @@ def printNotifySaveScreenedResults(
                         maxcolwidths=Utility.tools.getMaxColumnWidths(saveResultsTrimmed)
                     ).encode("utf-8").decode(STD_ENCODING)
                     try:
-                        caption_df = saveResultsTrimmed[['LTP','%Chng','Volume']].head(5)
-                        caption_df.loc[:, "LTP"] = caption_df.loc[:, "LTP"].apply(
-                            lambda x: str(int(round(float(x),0)))
-                        )
-                        caption_df.loc[:, "%Chng"] = caption_df.loc[:, "%Chng"].apply(
-                            lambda x: f'{int(round(float(x.split(" ")[0].replace("%","")),0))}%'
-                        )
-                        caption_df.loc[:, "Volume"] = caption_df.loc[:, "Volume"].apply(
-                            lambda x: f'{int(round(float(x.replace("x","")),0))}x' if (len(x.replace("x","").strip()) > 0 and not pd.isna(float(x.replace("x","")))) else ''
-                        )
-                        caption_df.rename(columns={"%Chng": "Ch%","Volume":"Vol"}, inplace=True)
+                        if "EoDDiff" in saveResultsTrimmed.columns:
+                            caption_df = saveResultsTrimmed[['LTP','DayHighDiff','EoDDiff']].tail(configManager.telegramSampleNumberRows)
+                            for col in caption_df.columns:
+                                caption_df.loc[:, col] = caption_df.loc[:, col].apply(
+                                    lambda x: str(int(round(float(x),0))) if "%" not in str(x) else str(x)
+                                )
+                            with pd.option_context('mode.chained_assignment', None):
+                                caption_df.rename(columns={"DayHighDiff": "Hgh","EoDDiff":"EoD"}, inplace=True)
+                        else:
+                            caption_df = saveResultsTrimmed[['LTP','%Chng','Volume']].head(configManager.telegramSampleNumberRows)
+                            caption_df.loc[:, "LTP"] = caption_df.loc[:, "LTP"].apply(
+                                lambda x: str(int(round(float(x),0)))
+                            )
+                            caption_df.loc[:, "%Chng"] = caption_df.loc[:, "%Chng"].apply(
+                                lambda x: f'{int(round(float(x.split(" ")[0].replace("%","")),0))}%'
+                            )
+                            caption_df.loc[:, "Volume"] = caption_df.loc[:, "Volume"].apply(
+                                lambda x: f'{int(round(float(x.replace("x","")),0))}x' if (len(x.replace("x","").strip()) > 0 and not pd.isna(float(x.replace("x","")))) else ''
+                            )
+                            caption_df.rename(columns={"%Chng": "Ch%","Volume":"Vol"}, inplace=True)
                     except:
                         cols = [list(saveResultsTrimmed.columns)[0]]
                         cols.extend(list(saveResultsTrimmed.columns[5:]))
@@ -2223,7 +2352,7 @@ def printNotifySaveScreenedResults(
                         headers="keys",
                         tablefmt=colorText.No_Pad_GridFormat,
                         maxcolwidths=[None,None,4,3]
-                    ).encode("utf-8").decode(STD_ENCODING).replace("-K-----S-----C-----R","-K-----S----C---R").replace("%  ","% ").replace("=K=====S=====C=====R","=K=====S====C===R").replace("Vol  |","Vol|").replace("x  ","x")
+                    ).encode("utf-8").decode(STD_ENCODING).replace("-K-----S-----C-----R","-K-----S----C---R").replace("%  ","% ").replace("=K=====S=====C=====R","=K=====S====C===R").replace("Vol  |","Vol|").replace("Hgh  |","Hgh|").replace("EoD  |","EoD|").replace("x  ","x")
                     caption_results = Utility.tools.removeAllColorStyles(caption_results.replace("-E-----N-----E-----R","-E-----N----E---R").replace("=E=====N=====E=====R","=E=====N====E===R"))
                     caption = f"{caption}.Open attached image for more. Samples:<pre>{caption_results}</pre>{elapsed_text}{pipedTitle}" #<i>Author is <u><b>NOT</b> a SEBI registered financial advisor</u> and MUST NOT be deemed as one.</i>"
                 if not testing: # and not userPassedArgs.runintradayanalysis:
@@ -2358,12 +2487,13 @@ def removedUnusedColumns(screenResults, saveResults, dropAdditionalColumns=[], u
                     if col in saveResults.columns:
                         saveResults.drop(col, axis=1, inplace=True, errors="ignore")
         if screenResults is not None:
-            screenResults.drop(f"LTP{period}", axis=1, inplace=True, errors="ignore")
-            screenResults.drop(f"Growth{period}", axis=1, inplace=True, errors="ignore")
-            if len(dropAdditionalColumns) > 0:
-                for col in dropAdditionalColumns:
-                    if col in screenResults.columns:
-                        screenResults.drop(col, axis=1, inplace=True, errors="ignore")
+            with pd.option_context('mode.chained_assignment', None):
+                screenResults.drop(f"LTP{period}", axis=1, inplace=True, errors="ignore")
+                screenResults.drop(f"Growth{period}", axis=1, inplace=True, errors="ignore")
+                if len(dropAdditionalColumns) > 0:
+                    for col in dropAdditionalColumns:
+                        if col in screenResults.columns:
+                            screenResults.drop(col, axis=1, inplace=True, errors="ignore")
     return summaryReturns
 
 
@@ -2772,6 +2902,12 @@ def saveNotifyResultsFile(
         pastDate = PKDateUtilities.nthPastTradingDateStringFromFutureDate(int(userPassedArgs.backtestdaysago) if needsCalc else 0) if needsCalc else None
         filename = Utility.tools.promptSaveResults(choices,
             saveResults, defaultAnswer=defaultAnswer,pastDate=pastDate)
+        # User triggered telegram bot request
+        # Group user Ids are < 0, individual ones are > 0
+        if filename is not None and user is not None and int(str(user)) > 0:
+            sendMessageToTelegramChannel(
+                document_filePath=filename, caption=caption, user=user
+            )
         OutputControls().printOutput(
             colorText.BOLD
             + colorText.WARN

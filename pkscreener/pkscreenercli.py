@@ -23,8 +23,8 @@
     SOFTWARE.
 
 """
-# Pyinstaller compile Windows: pyinstaller --onefile --icon=screenshots\icon.ico pkscreener\pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive-progress
-# Pyinstaller compile Linux  : pyinstaller --onefile --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive-progress
+# Pyinstaller compile Windows: pyinstaller --onefile --icon=screenshots\icon.ico pkscreener\pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
+# Pyinstaller compile Linux  : pyinstaller --onefile --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
 import warnings
 warnings.simplefilter("ignore", UserWarning,append=True)
 import argparse
@@ -380,7 +380,7 @@ def warnAboutDependencies():
             input("Press any key to try anyway...")
     
 def runApplication():
-    from pkscreener.globals import main, sendQuickScanResult,sendMessageToTelegramChannel, sendGlobalMarketBarometer, updateMenuChoiceHierarchy, isInterrupted, refreshStockData, closeWorkersAndExit
+    from pkscreener.globals import main, sendQuickScanResult,sendMessageToTelegramChannel, sendGlobalMarketBarometer, updateMenuChoiceHierarchy, isInterrupted, refreshStockData, closeWorkersAndExit, resetUserMenuChoiceOptions
     # From a previous call to main with args, it may have been mutated.
     # Let's stock to the original args passed by user
     try:
@@ -388,6 +388,7 @@ def runApplication():
         savedPipedArgs = args.pipedmenus if args is not None and args.pipedmenus is not None else None
     except:
         pass
+    global results, resultStocks, plainResults, dbTimestamp, elapsed_time, start_time
     # args = " -a Y -e -p -u 6186237493 -o X:12:30::D:D:D:D:D".split(" ")
     # argsv = argParser.parse_known_args(args=args)
     argsv = argParser.parse_known_args()
@@ -405,18 +406,50 @@ def runApplication():
     args.pipedmenus = savedPipedArgs
     if args.options is not None:
         args.options = args.options.replace("::",":").replace("\"","").replace("'","")
+        if args.options.upper().startswith("C") or "C:" in args.options.upper():
+            args.runintradayanalysis = True
     if args.runintradayanalysis:
-        from pkscreener.classes.MenuOptions import menus
-        runOptions = menus.allMenus(topLevel="C", index=12)
+        from pkscreener.classes.MenuOptions import menus, PREDEFINED_PIPED_MENU_OPTIONS
+        maxdisplayresults = configManager.maxdisplayresults
+        configManager.maxdisplayresults = 2000
+        configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
+        runOptions = []
+        if len(args.options.split(":")) >= 4:
+            runOptions = [args.options]
+        else:
+            runOptions =  menus.allMenus(topLevel="C", index=12)
+            runOptions.extend(PREDEFINED_PIPED_MENU_OPTIONS)
         optionalFinalOutcome_df = None
         import pkscreener.classes.Utility as Utility
         import pandas as pd
         # Delete any existing data from the previous run.
         configManager.deleteFileWithPattern(pattern="stock_data_*.pkl")
+        analysis_index = 1
         for runOption in runOptions:
+            OutputControls().printOutput(
+                colorText.GREEN
+                + f"[+] Running Intraday Analysis: {analysis_index} of {len(runOptions)}..."
+                + colorText.END
+            )
+            analysisOptions = runOption.split("|")
+            analysisOptions[-1] = analysisOptions[-1].replace("X:","C:")
+            runOption = "|".join(analysisOptions)
             args.options = runOption
             try:
-                optionalFinalOutcome_df,_ = main(userArgs=args,optionalFinalOutcome_df=optionalFinalOutcome_df)
+                results,plainResults = main(userArgs=args,optionalFinalOutcome_df=optionalFinalOutcome_df)
+                if args.pipedmenus is not None:
+                    while args.pipedmenus is not None:
+                        results, plainResults = main(userArgs=args)
+                if isInterrupted():
+                    closeWorkersAndExit()
+                    exitGracefully()
+                    sys.exit(0)
+                runPipedScans = True
+                while runPipedScans:
+                    runPipedScans = pipeResults(plainResults,args)
+                    if runPipedScans:
+                        results, plainResults = main(userArgs=args)
+                optionalFinalOutcome_df = results
                 if "EoDDiff" not in optionalFinalOutcome_df.columns:
                     # Somehow the file must have been corrupted. Let's re-download
                     configManager.deleteFileWithPattern(pattern="stock_data_*.pkl")
@@ -427,44 +460,53 @@ def runApplication():
                 OutputControls().printOutput(e)
                 if args.log:
                     traceback.print_exc()
-        if optionalFinalOutcome_df is not None:
+            resetUserMenuChoiceOptions()
+            analysis_index += 1
+
+        configManager.maxdisplayresults = maxdisplayresults
+        configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
+        if optionalFinalOutcome_df is not None and not optionalFinalOutcome_df.empty:
             final_df = None
-            optionalFinalOutcome_df.drop('FairValue', axis=1, inplace=True, errors="ignore")
-            df_grouped = optionalFinalOutcome_df.groupby("Stock")
-            for stock, df_group in df_grouped:
-                if stock == "PORTFOLIO":
-                    if final_df is None:
-                        final_df = df_group[["Pattern","LTP","SqrOffLTP","SqrOffDiff","EoDLTP","EoDDiff","DayHigh","DayHighDiff"]]
-                    else:
-                        final_df = pd.concat([final_df, df_group[["Pattern","LTP","SqrOffLTP","SqrOffDiff","EoDLTP","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
-            final_df.rename(
-                columns={
-                    "LTP": "Morning Portfolio",
-                    "SqrOffLTP": "SqrOff Portfolio",
-                    "EoDLTP": "EoD Portfolio",
-                    },
-                    inplace=True,
-                )
-            mark_down = colorText.miniTabulator().tabulate(
-                                final_df,
-                                headers="keys",
-                                tablefmt=colorText.No_Pad_GridFormat,
-                                showindex = False
-                            ).encode("utf-8").decode(Utility.STD_ENCODING)
-            OutputControls().printOutput(mark_down)
-            sendQuickScanResult(menuChoiceHierarchy="IntradayAnalysis",
-                                user="-1001785195297",
-                                tabulated_results=mark_down,
-                                markdown_results=mark_down,
-                                caption="IntradayAnalysis - Morning alert vs Market Close",
-                                pngName= f"PKS_IA_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
-                                pngExtension= ".png"
-                                )
+            try:
+                optionalFinalOutcome_df.drop('FairValue', axis=1, inplace=True, errors="ignore")
+                df_grouped = optionalFinalOutcome_df.groupby("Stock")
+                for stock, df_group in df_grouped:
+                    if stock == "PORTFOLIO":
+                        if final_df is None:
+                            final_df = df_group[["Pattern","LTP","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
+                        else:
+                            final_df = pd.concat([final_df, df_group[["Pattern","LTP","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
+            except:
+                pass
+            if final_df is not None and not final_df.empty:
+                with pd.option_context('mode.chained_assignment', None):
+                    final_df.rename(
+                        columns={
+                            "LTP": "Morning Portfolio",
+                            "SqrOffLTP": "SqrOff Portfolio",
+                            "EoDLTP": "EoD Portfolio",
+                            },
+                            inplace=True,
+                        )
+                mark_down = colorText.miniTabulator().tabulate(
+                                    final_df,
+                                    headers="keys",
+                                    tablefmt=colorText.No_Pad_GridFormat,
+                                    showindex = False
+                                ).encode("utf-8").decode(Utility.STD_ENCODING)
+                OutputControls().printOutput(mark_down)
+                sendQuickScanResult(menuChoiceHierarchy="IntradayAnalysis",
+                                    user="-1001785195297",
+                                    tabulated_results=mark_down,
+                                    markdown_results=mark_down,
+                                    caption="IntradayAnalysis - Morning alert vs Market Close",
+                                    pngName= f"PKS_IA_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
+                                    pngExtension= ".png"
+                                    )
     else:
         if args.barometer:
             sendGlobalMarketBarometer(userArgs=args)
         else:
-            global results, resultStocks, plainResults, dbTimestamp, elapsed_time, start_time
             monitorOption_org = ""
             # args.monitor = configManager.defaultMonitorOptions
             if args.monitor:
@@ -609,7 +651,7 @@ def pipeResults(prevOutput,args):
         if monitorOption.startswith("|"):
             monitorOption = monitorOption.replace("|","")
             monitorOptions = monitorOption.split(":")
-            if "X" in monitorOptions[0].upper() and monitorOptions[1] != "0":
+            if monitorOptions[0].upper() in ["X","C"] and monitorOptions[1] != "0":
                 monitorOptions[1] = "0"
                 monitorOption = ":".join(monitorOptions)
             if "B" in monitorOptions[0].upper() and monitorOptions[1] != "30":
@@ -646,7 +688,7 @@ def pkscreenercli():
                 traceback.print_exc()
             pass
     try:
-        OutputControls(enableMultipleLineOutput=(args is None or args.monitor is None)).printOutput("",end="\r")
+        OutputControls(enableMultipleLineOutput=(args is None or args.monitor is None or args.runintradayanalysis)).printOutput("",end="\r")
         configManager.getConfig(ConfigManager.parser)
         import atexit
         atexit.register(exitGracefully)

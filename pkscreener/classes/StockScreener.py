@@ -101,8 +101,9 @@ class StockScreener:
             # if userArgsLog:
             #     hostRef.default_logger.info(f"For stock:{stock}, stock exists in objectDictionary:{hostRef.objectDictionaryPrimary.get(stock)}, cacheEnabled:{configManager.cacheEnabled}, isTradingTime:{self.isTradingTime}, downloadOnly:{downloadOnly}")
             data = None
+            intraday_data = None
             data = self.getRelevantDataForStock(totalSymbols, shouldCache, stock, downloadOnly, printCounter, backtestDuration, hostRef,hostRef.objectDictionaryPrimary, configManager, fetcher, period,None, testData,exchangeName)
-            if not configManager.isIntradayConfig() and configManager.calculatersiintraday:
+            if executeOption == 32 or (not configManager.isIntradayConfig() and configManager.calculatersiintraday):
                 # Daily data is already available in "data" above.
                 # We need the intraday data for 1-d RSI values when config is not for intraday
                 intraday_data = self.getRelevantDataForStock(totalSymbols, shouldCache, stock, downloadOnly, printCounter, backtestDuration, hostRef, hostRef.objectDictionarySecondary, configManager, fetcher, "1d","1m", testData,exchangeName)
@@ -266,7 +267,7 @@ class StockScreener:
                 hasBbandsSqz = False
                 hasMASignalFilter = False
 
-                isValidityCheckMet = self.performValidityCheckForExecuteOptions(executeOption,screener,fullData,screeningDictionary,saveDictionary,processedData,configManager,maLength)
+                isValidityCheckMet = self.performValidityCheckForExecuteOptions(executeOption,screener,fullData,screeningDictionary,saveDictionary,processedData,configManager,maLength,intraday_data)
                 if not isValidityCheckMet:
                     return returnLegibleData("Validity Check not met!")
                 isShortTermBullish = (executeOption == 11 and isValidityCheckMet)
@@ -372,10 +373,11 @@ class StockScreener:
                         isConfluence = screener.validateConfluence(
                             stock,
                             processedData,
+                            fullData,
                             screeningDictionary,
                             saveDictionary,
                             percentage=insideBarToLookback,
-                            confFilter=(maLength if maLength > 0 else 3) # 1 = Conf up, 2 = Conf Down, 3 = all
+                            confFilter=(maLength if maLength > 0 else 3) # 1 = Conf up, 2 = Conf Down, 3 = all, 4 super confluence (10>20>55 EMA > 200SMA)
                         )
                         if not isConfluence:
                             return returnLegibleData(f"isConfluence:{isConfluence}")
@@ -457,7 +459,7 @@ class StockScreener:
                                 onlyMF=(executeOption == 21 and reversalOption in [5,6]),
                                 hostData=data,
                                 exchangeName=exchangeName,
-                                refreshMFAndFV=(menuOption in ["X"]),
+                                refreshMFAndFV=(menuOption in ["X", "C"]),
                                 downloadOnly=True
                             )
                             hostRef.objectDictionaryPrimary[stock] = data.to_dict("split")
@@ -564,7 +566,7 @@ class StockScreener:
                         or (executeOption == 9 and hasMinVolumeRatio)
                         or (executeOption == 10 and isPriceRisingByAtLeast2Percent)
                         or (executeOption == 11 and isShortTermBullish)
-                        or (executeOption in [12,13,14,15,16,17,18,19,20,23,24,25,27,28,30,31,32] and isValidityCheckMet)
+                        or (executeOption in [12,13,14,15,16,17,18,19,20,23,24,25,27,28,30,31,32,33,34] and isValidityCheckMet)
                         or (executeOption == 21 and (mfiStake > 0 and reversalOption in [3,5]))
                         or (executeOption == 21 and (mfiStake < 0 and reversalOption in [6,7]))
                         or (executeOption == 21 and (fairValueDiff > 0 and reversalOption in [8]))
@@ -707,9 +709,9 @@ class StockScreener:
                 )
         return None
 
-    def performValidityCheckForExecuteOptions(self,executeOption,screener,fullData,screeningDictionary,saveDictionary,processedData,configManager,buySellAll=3):
+    def performValidityCheckForExecuteOptions(self,executeOption,screener,fullData,screeningDictionary,saveDictionary,processedData,configManager,buySellAll=3,intraday_data=None):
         isValid = True
-        if executeOption not in [11,12,13,14,15,16,17,18,19,20,23,24,25,27,28,30,31,32]:
+        if executeOption not in [11,12,13,14,15,16,17,18,19,20,23,24,25,27,28,30,31,32,33,34]:
             return True
         if executeOption == 11:
             isValid = screener.validateShortTermBullish(
@@ -753,6 +755,12 @@ class StockScreener:
             isValid = screener.findATRTrailingStops(fullData,sensitivity=configManager.atrTrailingStopSensitivity, atr_period=configManager.atrTrailingStopPeriod,ema_period=configManager.atrTrailingStopEMAPeriod,buySellAll=buySellAll,saveDict=saveDictionary,screenDict=screeningDictionary)
         elif executeOption == 31: # findBuySellSignalsFromATRTrailing # findATRTrailingStops
             isValid = screener.findHighMomentum(processedData)
+        elif executeOption == 32: # findIntradayOpenSetup
+            isValid = screener.findIntradayOpenSetup(processedData,intraday_data,saveDictionary,screeningDictionary,buySellAll=buySellAll)
+        elif executeOption == 33: # findPotentialProfitableEntries
+            isValid = screener.findPotentialProfitableEntries(processedData,fullData, saveDictionary,screeningDictionary)
+        elif executeOption == 34: # findBullishAVWAP
+            isValid = screener.findBullishAVWAP(fullData,screeningDictionary,saveDictionary)
         return isValid        
                     
     def performBasicVolumeChecks(self, executeOption, volumeRatio, screeningDictionary, saveDictionary, processedData, configManager, screener):
