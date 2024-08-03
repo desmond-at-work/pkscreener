@@ -34,8 +34,8 @@ from pkscreener.classes import VERSION
 configManager = ConfigManager.tools()
 MENU_SEPARATOR = ""
 LINE_SEPARATOR = "\n"
-MAX_SUPPORTED_MENU_OPTION = 33
-MAX_MENU_OPTION = 41
+MAX_SUPPORTED_MENU_OPTION = 34
+MAX_MENU_OPTION = 42
 
 level0MenuDict = {
     "X": "Scanners",
@@ -55,13 +55,42 @@ level0MenuDict = {
     "H": "Help / About Developer",
     "Z": "Exit (Ctrl + C)",
 }
+level1_index_options_sectoral= {
+    "1": "Nifty 50 (^NSEI)                                  ",
+    "2": "BSE Sensex (^BSESN)",
+    "3": "Nifty Auto (^CNXAUTO)                             ",
+    "4": "Nifty Bank (^NSEBANK)",
+    "5": "Nifty Consumption (^CNXCONSUM)                    ",
+    "6": "Nifty Energy (^CNXENERGY)",
+    "7": "Nifty Financial Services (NIFTY_FIN_SERVICE.NS)   ",
+    "8": "Nifty Financial Services 25/50 (^CNXFIN)",
+    "9": "Nifty FMCG (^CNXFMCG)                             ",
+    "10": "Nifty Healthcare (NIFTY_HEALTHCARE.NS)",
+    "11": "Nifty IT (^CNXIT)                                ",
+    "12": "Nifty Infra (^CNXINFRA)",
+    "13": "Nifty Media (^CNXMEDIA)                           ",
+    "14": "Nifty Metal (^CNXMETAL)",
+    "15": "Nifty Pharma (^CNXPHARMA)                        ",
+    "16": "Nifty Private Bank (NIFTY_PVT_BANK.NS)",
+    "17": "Nifty PSU Bank (^CNXPSUBANK)                     ",
+    "18": "Nifty Realty (^CNXREALTY)",
+    "19": "Nifty Service Sector (^CNXSERVICE)               ",
+    "20": "Nifty MidCap 50 (^NSEMDCP50)",
+    "21": "Nifty MidCap 100 (NIFTY_MIDCAP_100.NS)           ",
+    "22": "Nifty MidCap 100 (NIFTY_LARGEMID_250.NS)",
+    "23": "Nifty 100 ESG (NIFTY100_ESG.NS)                  ",
+    "24": "Nifty Consumer Durables (NIFTY_CONSR_DURBL.NS)",
+    "25": "Nifty Oil and Gas (NIFTY_OIL_AND_GAS.NS)         ",
+    "26": "Nifty MidSmall Healthcare (NIFTY_MIDSML_HLTH.NS)",
+    "27": "All of the above",
+}
 level1_P_MenuDict = {
     "1": "Predefined Piped Scanners",
     "2": "Define my custom Piped Scanner",
     "3": "Run Piped Scans Saved So Far",
     "M": "Back to the Top/Main menu",
 }
-PREDEFINED_SCAN_MENU_KEYS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19"]
+PREDEFINED_SCAN_MENU_KEYS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20", "21", "22", "23"]
 PREDEFINED_SCAN_MENU_TEXTS = [
     "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross     ",
     "Volume Scanners | High Momentum | ATR Cross",
@@ -82,6 +111,10 @@ PREDEFINED_SCAN_MENU_TEXTS = [
     "ATR Trailing Stops | VCP (Minervini)                               ",
     "VCP | ATR Trailing Stops",
     "Nifty 50,Nifty Bank | VCP | ATR Trailing Stops                     ",
+    "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross | VCP | ATR Trailing Stops",
+    "BullCross-MA | Fair Value Buy Opportunities                        ",
+    "VCP | Chart Patterns | MA Support | Bullish AVWAP",
+    "VCP (Mark Minervini) | Chart Patterns | MA Support | Bullish AVWAP ",
 ]
 level2_P_MenuDict = {}
 for key in PREDEFINED_SCAN_MENU_KEYS:
@@ -107,7 +140,19 @@ PREDEFINED_SCAN_MENU_VALUES =[
     "--systemlaunched -a y -e -o 'X:12:30:1:>|X:12:7:8:'",
     "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:30:1:'",
     "--systemlaunched -a y -e -o 'X:0:0:^NSEI,^NSEBANK:>|X:12:7:4:>|X:12:30:1:'",
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:>|X:12:7:4:>|X:12:30:1:'",
+    "--systemlaunched -a y -e -o 'X:12:7:9:5:>|X:12:21:8:'",
+    "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:7:9:1:1:>|X:12:34:'",
+    "--systemlaunched -a y -e -o 'X:12:7:8:>|X:12:7:9:1:1:>|X:12:34:'",
 ]
+PREDEFINED_PIPED_MENU_OPTIONS = []
+for option in PREDEFINED_SCAN_MENU_VALUES:
+    argOptions = option.split("-o ")[-1]
+    analysisOptions = argOptions.split("|")
+    analysisOptions[-1] = analysisOptions[-1].replace("X:","C:")
+    argOptions = "|".join(analysisOptions)
+    PREDEFINED_PIPED_MENU_OPTIONS.append(argOptions.replace("'","").replace("\"",""))
+
 PIPED_SCANNERS = {}
 for key in PREDEFINED_SCAN_MENU_KEYS:
     PIPED_SCANNERS[key] = PREDEFINED_SCAN_MENU_VALUES[int(key)-1]
@@ -145,7 +190,8 @@ level1_X_MenuDict = {
     "W": "Screen stocks from my own Watchlist",
     "N": "Nifty Prediction using Artifical Intelligence (Use for Gap-Up/Gap-Down/BTST/STBT)",
     "E": "Live Index Scan : 5 EMA for Intraday",
-    "0": "Screen stocks/index by the stock/index names (NSE Stock Code, e.g. SBIN,BANKINDIA or Yahoo Finance index symbol, e.g. ^NSEI, ^NSEBANK, ^BSESN)",
+    "S": "Sectoral Indices",
+    "0": "Screen stocks by the stock names",
     "1": "Nifty 50          ",
     "2": "Nifty Next 50     ",
     "3": "Nifty 100         ",
@@ -197,6 +243,9 @@ level2_X_MenuDict = {
     "29": "Intraday Bid/Ask Build-up      ",
     "30": "ATR Trailing Stops(Swing Paper Trading)",
     "31": "High Momentum(RSI,MFI,CCI)     ",
+    "32": "Intraday Breakout/Breakdown setup",
+    "33": "Potential Profitable setups    ",
+    "34": "Bullish Anchored-VWAP",
     # "32": "High Momentum(14)",
     # "28": "Extremely bullish daily close      ",
     # "29": "Rising RSI                      ",
@@ -252,7 +301,8 @@ level4_X_ChartPattern_BBands_SQZ_MenuDict = {
 level4_X_ChartPattern_Confluence_MenuDict = {
     "1": "Confluence up / GoldenCrossOver / DMA50 / DMA200",
     "2": "Confluence Down / DeadCrossOver",
-    "3": "Any/All",
+    "3": "Any/All (Confluence up/down/Crossovers)",
+    "4": "8,21,55-EMA / 200-SMA Super-Confluence",
     "0": "Cancel",
 }
 
@@ -386,12 +436,13 @@ class menus:
     def allMenus(topLevel="X",index=12):
         menuOptions = [topLevel]
         indexOptions =[index]
-        scanOptions = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,23,24,25,27,28,30,31]
+        scanOptions = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,27,28,30,31,32]
         scanSubOptions = {
                             6:[1,2,3,4,5,6,{7:[1,2]},8,9,10],
-                            7:[1,2,{3:[1,2]},4,5,{6:[1,3]},7],
+                            7:[1,2,{3:[1,2]},4,5,{6:[1,3]},7,8,{9:[1,2,3,4,5,6]}],
+                            21:[3,5,6,7,8,9],
                             30:[1,2],
-                            # 21:[3,5,6,7,8,9]
+                            32:[1,2],
                          }
         runOptions = []
         for menuOption in menuOptions:
@@ -543,6 +594,13 @@ class menus:
                         renderStyle=renderStyle,
                         parent=selectedMenu,
                     )
+                elif selectedMenu.menuKey == "S":
+                    return self.renderLevel2_Sectoral_Menus(
+                        skip=skip,
+                        asList=asList,
+                        renderStyle=renderStyle,
+                        parent=selectedMenu,
+                    )
                 else:
                     # next levelsub-menu of the selected sub-menu
                     return self.renderLevel2_X_Menus(
@@ -582,7 +640,7 @@ class menus:
                         renderStyle=renderStyle,
                         parent=selectedMenu,
                     )
-                elif selectedMenu.menuKey in ["30"]:
+                elif selectedMenu.menuKey in ["30","32"]:
                     return self.renderLevel4_X_Lorenzian_Menus(
                         skip=skip,
                         asList=asList,
@@ -848,13 +906,49 @@ class menus:
                     "" + colorText.END
                 )
             return menuText
-        
+
+    def renderLevel2_Sectoral_Menus(
+        self, skip=[], asList=False, renderStyle=None, parent=None
+    ):
+        indexKeys = level1_index_options_sectoral.keys()
+        menuText = self.fromDictionary(
+            level1_index_options_sectoral,
+            renderExceptionKeys=[str(len(indexKeys))],
+            renderStyle=renderStyle
+            if renderStyle is not None
+            else MenuRenderStyle.TWO_PER_ROW,
+            skip=skip,
+            parent=parent,
+        ).render(asList=asList,coloredValues=[str(len(indexKeys))] if not asList else [])
+        if asList:
+            return menuText
+        else:
+            if OutputControls().enableMultipleLineOutput:
+                OutputControls().printOutput(
+                    colorText.BOLD
+                    + colorText.WARN
+                    + "[+] Select a sectoral index:"
+                    + colorText.END
+                )
+                OutputControls().printOutput(
+                    colorText.BOLD
+                    + menuText
+                    + """
+
+    Enter your choice > (default is """
+                    + colorText.WARN
+                    + (self.find(str(len(indexKeys))) or menu().create('?','?')).keyTextLabel().strip()
+                    + ")  "
+                    "" + colorText.END
+                )
+            return menuText
+
     def renderLevel1_X_Menus(
         self, skip=[], asList=False, renderStyle=None, parent=None
     ):
         menuText = self.fromDictionary(
             level1_X_MenuDict,
-            renderExceptionKeys=["W", "0", "M", "15"],
+            renderExceptionKeys=["W", "0", "M", "S", "15"],
             renderStyle=renderStyle
             if renderStyle is not None
             else MenuRenderStyle.THREE_PER_ROW,
@@ -1238,7 +1332,7 @@ class menus:
             else MenuRenderStyle.STANDALONE,
             skip=skip,
             parent=parent,
-        ).render(asList=asList,coloredValues=["1"] if not asList else [])
+        ).render(asList=asList,coloredValues=["4"] if not asList else [])
         if asList:
             return menuText
         else:
@@ -1256,7 +1350,7 @@ class menus:
 
     Enter your choice > (default is """
                     + colorText.WARN
-                    + (self.find("1") or menu().create('?','?')).keyTextLabel().strip() + ")"
+                    + (self.find("4") or menu().create('?','?')).keyTextLabel().strip() + ")"
                     + colorText.END
                 )
             return menuText

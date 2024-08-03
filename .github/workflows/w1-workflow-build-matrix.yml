@@ -106,7 +106,7 @@ jobs:
           - os: windows-latest
             TARGET: Windows
             CMD_BUILD: |
-              pyinstaller --onefile --icon=screenshots\icon.ico pkscreener\pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive-progress --hidden-import yfinance --hidden-import vectorbt --hidden-import PKDevTools --hidden-import PKNSETools
+              pyinstaller --onefile --icon=screenshots\icon.ico pkscreener\pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress --hidden-import yfinance --hidden-import vectorbt --hidden-import PKDevTools --hidden-import PKNSETools
             DEP_BUILD: |
               python3 -m pip install --upgrade pip
               echo Installing TA-lib...
@@ -137,7 +137,7 @@ jobs:
           - os: ubuntu-20.04
             TARGET: Linux
             CMD_BUILD: |
-              pyinstaller --onefile --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive-progress
+              pyinstaller --onefile --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
               mv /home/runner/work/PKScreener/PKScreener/dist/pkscreenercli /home/runner/work/PKScreener/PKScreener/dist/pkscreenercli.bin
               chmod +x /home/runner/work/PKScreener/PKScreener/dist/pkscreenercli.bin
             DEP_BUILD: |
@@ -154,7 +154,7 @@ jobs:
               pip3 uninstall -y PKDevTools
               pip3 install -r requirements.txt
               pip3 install -r requirements-dev.txt
-              pip3 install ta-lib==0.4.28
+              pip3 install ta-lib==0.4.32
               pip3 install .
             TEST_BUILD: |
               /home/runner/work/PKScreener/PKScreener/dist/pkscreenercli.bin --testbuild
@@ -165,7 +165,7 @@ jobs:
           - os: macos-latest
             TARGET: MacOS
             CMD_BUILD: |
-              pyinstaller --onefile --windowed --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive-progress
+              pyinstaller --onefile --windowed --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
               mv /Users/runner/work/PKScreener/PKScreener/dist/pkscreenercli /Users/runner/work/PKScreener/PKScreener/dist/pkscreenercli.run
             DEP_BUILD: |
               brew install ta-lib
@@ -174,7 +174,7 @@ jobs:
               pip3 uninstall -y PKDevTools
               pip3 install -r requirements.txt
               pip3 install -r requirements-dev.txt
-              pip3 install ta-lib==0.4.28
+              python3 -m pip install -U ta-lib==0.4.32
               pip3 install .
             TEST_BUILD: |
               /Users/runner/work/PKScreener/PKScreener/dist/pkscreenercli.run --testbuild
@@ -307,15 +307,6 @@ jobs:
           prerelease: false
           make_latest: true
 
-  Call-python-publish-workflow:
-      uses: pkjmesra/PKScreener/.github/workflows/w2-workflow-python-publish.yml@main
-      needs: [Build]
-      with:
-        branch-name: ${{ needs.Build.outputs.tag }}
-        version: ${{ needs.Build.outputs.version }}
-        sendNotification: ${{ needs.Build.outputs.sendNotification }}
-      secrets: inherit
-
   README_Update:
     runs-on: ubuntu-20.04
     permissions: write-all
@@ -348,6 +339,15 @@ jobs:
             git commit -m "GitHub Action Workflow - Updating version to latest"
             git push -v
 
+  Call-python-publish-workflow:
+    uses: pkjmesra/PKScreener/.github/workflows/w2-workflow-python-publish.yml@main
+    needs: [Build, README_Update]
+    with:
+      branch-name: ${{ needs.Build.outputs.tag }}
+      version: ${{ needs.Build.outputs.version }}
+      sendNotification: ${{ needs.Build.outputs.sendNotification }}
+    secrets: inherit
+        
   Call-Docker-workflow:
     uses: pkjmesra/PKScreener/.github/workflows/w15-docker-image.yml@main
     needs: [Build, README_Update]

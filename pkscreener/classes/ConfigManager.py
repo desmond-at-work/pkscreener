@@ -74,7 +74,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
         self.maxBacktestWindow = 30
         self.minVolume = 10000
         self.soundAlertForMonitorOptions = "|{5}X:0:5:0:35:~X:12:7:4:>|X:12:30:1:~"
-        self.morninganalysiscandlenumber = 25 # 9:40am IST, since market opens at 9:15am IST
+        self.morninganalysiscandlenumber = 15 # 9:30am IST, since market opens at 9:15am IST
         self.morninganalysiscandleduration = '1m'
         self.pinnedMonitorSleepIntervalSeconds = 5
         self.logger = None
@@ -95,6 +95,11 @@ class tools(SingletonMixin, metaclass=SingletonType):
         self.minimumChangePercentage = 0
         self.daysToLookback = 22 * self.backtestPeriodFactor  # 1 month
         self.periods = [1,2,3,4,5,10,15,22,30]
+        self.superConfluenceEMAPeriods = '8,21,55'
+        self.superConfluenceMaxReviewDays = 3
+        self.superConfluenceEnforce200SMA = True
+        self.telegramSampleNumberRows = 5
+        self.anchoredAVWAPPercentage = 100
         if self.maxBacktestWindow > self.periods[-1]:
             self.periods.extend(self.maxBacktestWindow)
         MarketHours().setMarketOpenHourMinute(self.marketOpen)
@@ -159,6 +164,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
             parser.add_section("config")
             parser.add_section("filters")
             parser.set("config", "alwaysHiddenDisplayColumns", str(self.alwaysHiddenDisplayColumns))
+            parser.set("config", "anchoredAVWAPPercentage", str(self.anchoredAVWAPPercentage))
             parser.set("config", "atrtrailingstopemaperiod", str(self.atrTrailingStopEMAPeriod))
             parser.set("config", "atrtrailingstopperiod", str(self.atrTrailingStopPeriod))
             parser.set("config", "atrtrailingstopsensitivity", str(self.atrTrailingStopSensitivity))
@@ -191,9 +197,14 @@ class tools(SingletonMixin, metaclass=SingletonType):
             parser.set("config", "showunknowntrends", "y" if self.showunknowntrends else "n")
             parser.set("config", "shuffle", "y" if self.shuffleEnabled else "n")
             parser.set("config", "soundAlertForMonitorOptions", str(self.soundAlertForMonitorOptions))
+            parser.set("config", "superConfluenceEMAPeriods", str(self.superConfluenceEMAPeriods))
+            parser.set("config", "superConfluenceEnforce200SMA", "y" if (self.superConfluenceEnforce200SMA) else "n")
+            parser.set("config", "superConfluenceMaxReviewDays", str(self.superConfluenceMaxReviewDays))
+            
             parser.set("config", "telegramImageCompressionRatio", str(self.telegramImageCompressionRatio))
             parser.set("config", "telegramImageFormat", str(self.telegramImageFormat))
             parser.set("config", "telegramImageQualityPercentage", str(self.telegramImageQualityPercentage))
+            parser.set("config", "telegramSampleNumberRows", str(self.telegramSampleNumberRows))
             parser.set("config", "useEMA", "y" if self.useEMA else "n")
             parser.set("config", "vcpVolumeContractionRatio", str(self.vcpVolumeContractionRatio))
 
@@ -367,6 +378,17 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 self.vcpVolumeContractionRatio = input(
                     f"[+] Ratio of volume of recent largest to pullback candles for VCP. (number)(Optimal = 0.4, Current: {colorText.FAIL}{self.vcpVolumeContractionRatio}{colorText.END}): "
                 ) or self.vcpVolumeContractionRatio
+                self.superConfluenceEMAPeriods = input(
+                    f"[+] Comma separated EMA periods for super-confluence-checks. (numbers)(Optimal = 8,21,55, Current: {colorText.FAIL}{self.superConfluenceEMAPeriods}{colorText.END}): "
+                ) or self.superConfluenceEMAPeriods
+                self.superConfluenceMaxReviewDays = input(
+                    f"[+] Max number of review days for super-confluence-checks. (number)(Optimal = 3, Current: {colorText.FAIL}{self.superConfluenceMaxReviewDays}{colorText.END}): "
+                ) or self.superConfluenceMaxReviewDays
+                self.superConfluenceEnforce200SMA = str(
+                    input(
+                        f"[+] Enable enforcing SMA-200 check for super-confluence? When enabled, at least one of 8/21/55-EMA should be lower than SMA-200 [Y/N, Current: {colorText.FAIL}{'y' if self.superConfluenceEnforce200SMA else 'n'}{colorText.END}]: "
+                    ) or ('y' if self.superConfluenceEnforce200SMA else 'n')
+                ).lower()
             except Exception as e:
                 default_logger().debug(e,exc_info=True)
                 from time import sleep
@@ -375,6 +397,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 pass
             try:
                 parser.set("config", "alwaysHiddenDisplayColumns", str(self.alwaysHiddenDisplayColumns))
+                parser.set("config", "anchoredAVWAPPercentage", str(self.anchoredAVWAPPercentage))
                 parser.set("config", "atrtrailingstopemaperiod", str(self.atrTrailingStopEMAPeriod))
                 parser.set("config", "atrtrailingstopperiod", str(self.atrTrailingStopPeriod))
                 parser.set("config", "atrtrailingstopsensitivity", str(self.atrTrailingStopSensitivity))
@@ -416,9 +439,13 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 parser.set("config", "showunknowntrends", str(self.showunknowntrendsPrompt))
                 parser.set("config", "shuffle", str(self.shuffle))
                 parser.set("config", "soundAlertForMonitorOptions", str(self.soundAlertForMonitorOptions))
+                parser.set("config", "superConfluenceEMAPeriods", str(self.superConfluenceEMAPeriods))
+                parser.set("config", "superConfluenceEnforce200SMA", str(self.superConfluenceEnforce200SMA))
+                parser.set("config", "superConfluenceMaxReviewDays", str(self.superConfluenceMaxReviewDays))
                 parser.set("config", "telegramImageCompressionRatio", str(self.telegramImageCompressionRatio))
                 parser.set("config", "telegramImageFormat", str(self.telegramImageFormat))
                 parser.set("config", "telegramImageQualityPercentage", str(self.telegramImageQualityPercentage))
+                parser.set("config", "telegramSampleNumberRows", str(self.telegramSampleNumberRows))
                 parser.set("config", "useEMA", str(self.useEmaPrompt))
                 parser.set("config", "vcpVolumeContractionRatio", str(self.vcpVolumeContractionRatio))
 
@@ -557,9 +584,18 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 self.maxNumResultRowsInMonitor = int(parser.get("config", "maxNumResultRowsInMonitor"))
                 self.vcpVolumeContractionRatio = float(parser.get("config", "vcpVolumeContractionRatio"))
                 self.soundAlertForMonitorOptions = str(parser.get("config", "soundAlertForMonitorOptions"))
+                self.superConfluenceEMAPeriods = str(parser.get("config", "superConfluenceEMAPeriods"))
+                self.superConfluenceEnforce200SMA = (
+                    False
+                    if "y" not in str(parser.get("config", "superConfluenceEnforce200SMA")).lower()
+                    else True
+                )
+                self.superConfluenceMaxReviewDays = str(parser.get("config", "superConfluenceMaxReviewDays"))
                 self.telegramImageCompressionRatio = float(parser.get("config", "telegramImageCompressionRatio"))
                 self.telegramImageFormat = str(parser.get("config", "telegramImageFormat"))
                 self.telegramImageQualityPercentage = int(parser.get("config", "telegramImageQualityPercentage"))
+                self.anchoredAVWAPPercentage = int(parser.get("config", "anchoredAVWAPPercentage"))
+                self.telegramSampleNumberRows = int(parser.get("config", "telegramSampleNumberRows"))
                 MarketHours().setMarketOpenHourMinute(self.marketOpen)
                 MarketHours().setMarketCloseHourMinute(self.marketClose)
             except configparser.NoOptionError as e:# pragma: no cover

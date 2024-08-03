@@ -131,7 +131,7 @@ jobs:
         make
         sudo make install
         cd /home/runner/work/PKScreener/PKScreener/
-        pip3 install ta-lib==0.4.28
+        pip3 install ta-lib==0.4.32
 
     - name: Environment setup to get latest EXE
       if: ${{ inputs.skipDownload == '' }}
@@ -248,12 +248,13 @@ jobs:
 
     - name: Install Python Dependencies for clean up
       if: ${{ inputs.cleanuphistoricalscans == 'Y' || inputs.skipDownload == '' }}
+      continue-on-error: true
       run: |
+        pip3 install --upgrade pip
         pip3 install pandas
         pip3 install pytz
         pip3 install PKDevTools
         pip3 install PKNSETools
-        pip3 install .
         
     - name: Trigger miscellaneous tasks that are download-data dependent
       if: ${{ inputs.skipDownload == '' }}
@@ -289,7 +290,7 @@ jobs:
         python3 -m pip install --upgrade pip
         pip3 install -r requirements.txt
         pip3 install -r requirements-dev.txt
-        pip3 install ta-lib==0.4.28
+        pip3 install ta-lib==0.4.32
         pip3 install .
 
     - name: Setup Python environment for triggers on Windows
@@ -354,10 +355,12 @@ jobs:
         git push -v -u origin +actions-data-download
 
     - name: Delete this workflow run
+      continue-on-error: true
+      if: ${{ inputs.skipDownload == '' && startsWith(runner.os, 'Linux' ) }}
       shell: bash
       run: |
-        gh run list --status success --limit 400 --json databaseId -q '.[].databaseId' | xargs -IID gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions/runs/ID" -X DELETE
-        gh run list --status cancelled --limit 400 --json databaseId -q '.[].databaseId' | xargs -IID gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions/runs/ID" -X DELETE
+        gh run list --status success --limit 500 --json databaseId -q '.[].databaseId' | xargs -IID gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions/runs/ID" -X DELETE
+        gh run list --status cancelled --limit 500 --json databaseId -q '.[].databaseId' | xargs -IID gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions/runs/ID" -X DELETE
       env:
         GH_TOKEN : ${{secrets.GITHUB_TOKEN}}
   # || '--reScanForZeroSize --scans --local --scanDaysInPast 3 -s2 0,22,29,42,M,Z -s0 S,T,E,U,Z,H,Y,B,G,C,M,D,I,L,P -s1 W,N,E,M,Z,0,2,3,4,6,7,9,10,13,14,15 -s3 "0" -s4 "0" --branchname actions-data-download -f' }}

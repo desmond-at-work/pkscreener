@@ -78,6 +78,9 @@ from PKDevTools.classes.Utils import random_user_agent
 from pkscreener.classes.ArtTexts import getArtText
 from PKDevTools.classes.NSEMarketStatus import NSEMarketStatus
 
+import PIL.Image
+PIL.Image.MAX_IMAGE_PIXELS = None
+
 configManager = ConfigManager.tools()
 configManager.getConfig(ConfigManager.parser)
 nseFetcher = nseStockDataFetcher()
@@ -211,16 +214,17 @@ class tools:
             else:
                 needsWriting = True
             if df is not None and len(df) > 0:
-                df.sort_values(by=["Stock"], ascending=True, inplace=True)
-                df.to_pickle(lastScreened)
-                if choices is not None and df_save is not None:
-                    df_s = df_save.copy()
-                    df_s.reset_index(inplace=True)
-                    newStocks = df_s["Stock"].to_json(orient='records', lines=True).replace("\n","").replace("\"","").split(",")
-                    items.extend(newStocks)
-                    stockList = sorted(list(filter(None,list(set(items)))))
-                    finalStocks = ",".join(stockList)
-                    needsWriting = True
+                with pd.option_context('mode.chained_assignment', None):
+                    df.sort_values(by=["Stock"], ascending=True, inplace=True)
+                    df.to_pickle(lastScreened)
+                    if choices is not None and df_save is not None:
+                        df_s = df_save.copy()
+                        df_s.reset_index(inplace=True)
+                        newStocks = df_s["Stock"].to_json(orient='records', lines=True).replace("\n","").replace("\"","").split(",")
+                        items.extend(newStocks)
+                        stockList = sorted(list(filter(None,list(set(items)))))
+                        finalStocks = ",".join(stockList)
+                        needsWriting = True
             if needsWriting:
                 with open(fileName, 'w') as f:
                     f.write(finalStocks)
@@ -827,7 +831,7 @@ class tools:
                     if "RUNNER" not in os.environ.keys():
                         copyFilePath = os.path.join(Archiver.get_user_outputs_dir(), f"copy_{fileName}")
                         cacheFileSize = os.stat(cache_file).st_size if os.path.exists(cache_file) else 0
-                        if os.path.exists(cache_file) and cacheFileSize >= 1024*1024*50:
+                        if os.path.exists(cache_file) and cacheFileSize >= 1024*1024*40:
                             shutil.copy(cache_file,copyFilePath) # copy is the saved source of truth
             except pickle.PicklingError as e:  # pragma: no cover
                 default_logger().debug(e, exc_info=True)
@@ -1369,11 +1373,11 @@ class tools:
         m3 = menus()
         m3.renderForMenu(menu,asList=True)
         lMenu =  m3.find(str(respChartPattern))
-        maLength = tools.promptSubMenuOptions(lMenu)
+        maLength = tools.promptSubMenuOptions(lMenu,defaultOption= "4" if respChartPattern == 3 else "1" )
         return maLength
     
     # Prompt for submenu options
-    def promptSubMenuOptions(menu=None):
+    def promptSubMenuOptions(menu=None, defaultOption="1"):
         try:
             tools.promptMenus(menu=menu)
             resp = int(
@@ -1382,7 +1386,7 @@ class tools:
                     + colorText.WARN
                     + """[+] Select Option:"""
                     + colorText.END
-                ) or "1"
+                ) or defaultOption
             )
             if resp >= 0 and resp <= 10:
                 return resp
@@ -1495,9 +1499,9 @@ class tools:
                     input(
                         colorText.BOLD
                         + colorText.WARN
-                        + "\n[+] Enter Percentage within which all MA/EMAs should be (Ideal: 1-2%)? (Default=2): "
+                        + "\n[+] Enter Percentage within which all MA/EMAs should be (Ideal: 0.1-2%)? (Default=0.5): "
                         + colorText.END
-                    ) or "2"
+                    ) or "0.5"
                 )
                 return (resp, percent / 100.0)
             if resp >= 0 and resp <= 9:
