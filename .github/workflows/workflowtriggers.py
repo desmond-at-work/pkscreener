@@ -48,6 +48,12 @@ argParser.add_argument(
     required=required,
 )
 argParser.add_argument(
+    "--barometer",
+    action="store_true",
+    help="Trigger barometer",
+    required=required,
+)
+argParser.add_argument(
     "--branchname",
     help="branch name for check-in, check-out",
     required=required,
@@ -235,11 +241,11 @@ if __name__ == '__main__':
     if args.skiplistlevel0 is None:
         args.skiplistlevel0 = ",".join(["S", "T", "E", "U", "Z", "B", "H", "Y", "G", "C", "M", "D", "I", "L"])
     if args.skiplistlevel1 is None:
-        args.skiplistlevel1 = ",".join(["W,N,E,M,Z,0,1,2,3,4,5,6,7,8,9,10,11,13,14,15"])
+        args.skiplistlevel1 = ",".join(["W,N,E,M,Z,S,0,1,2,3,4,5,6,7,8,9,10,11,13,14,15"])
     if args.skiplistlevel2 is None:
-        args.skiplistlevel2 = ",".join(["0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,42,M,Z"])
+        args.skiplistlevel2 = ",".join(["0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,M,Z"])
     if args.skiplistlevel3 is None:
-        args.skiplistlevel3 = ",".join(["0,1,2,3,4,5,6,7"])
+        args.skiplistlevel3 = ",".join(["0,1,2,3,4,5,6,7,8,9,10"])
     if args.skiplistlevel4 is None:
         args.skiplistlevel4 = ",".join(["0"])
 
@@ -247,7 +253,7 @@ if __name__ == '__main__':
         # By default, just generate the report
         args.report = True
         args.skiplistlevel0 = "S,T,E,U,Z,H,Y,X,G,C,M,D,I,L,P" 
-        args.skiplistlevel1 = "W,N,E,M,Z,0,2,3,4,6,7,9,10,13,14,15"
+        args.skiplistlevel1 = "W,N,E,M,Z,S,0,2,3,4,6,7,9,10,13,14,15"
         args.skiplistlevel2 = "0,21,22,29,42,M,Z"
         args.skiplistlevel3 = "0"
         args.skiplistlevel4 = "0"
@@ -530,10 +536,21 @@ def triggerScanWorkflowActions(launchLocal=False, scanDaysInPast=0):
     # original_stdout = sys.stdout
     # original__stdout = sys.__stdout__
     commitFrequency = [21,34,55,89,144,200]
-    barometerTriggered = False
+    branch = "main"
+
+    # If the job got triggered before, let's wait until alert time (3 min for job setup, so effectively it will be 9:40am)
+    while (PKDateUtilities.currentDateTime() < PKDateUtilities.currentDateTime(simulate=True,hour=MORNING_ALERT_HOUR,minute=MORNING_ALERT_MINUTE)):
+        sleep(60) # Wait for alert time
+    # Trigger intraday pre-defined piped scanners
+    if PKDateUtilities.currentDateTime() <= PKDateUtilities.currentDateTime(simulate=True,hour=MarketHours().closeHour,minute=MarketHours().closeMinute):
+        scanIndex = 1
+        MAX_INDEX = 23
+        while scanIndex <= MAX_INDEX:
+            triggerRemoteScanAlertWorkflow(f"P:1:{scanIndex}:", branch)
+            scanIndex += 1
+
     for key in objectDictionary.keys():
         scanOptions = f'{objectDictionary[key]["td3"]}_D_D_D_D_D'
-        branch = "main"
         options = f'{scanOptions.replace("_",":").replace("B:","X:")}:D:D:D'.replace("::",":")
         if launchLocal:
             # from pkscreener import pkscreenercli
@@ -555,30 +572,12 @@ def triggerScanWorkflowActions(launchLocal=False, scanDaysInPast=0):
                 daysInPast -=1
             tryCommitOutcomes(options)
         else:
-            if not barometerTriggered and (PKDateUtilities.currentDateTime() < PKDateUtilities.currentDateTime(simulate=True,hour=MORNING_ALERT_HOUR,minute=MORNING_ALERT_MINUTE)):
-                # Send the global market barometer trigger
-                barometerTriggered = True
-                resp = triggerRemoteScanAlertWorkflow("X:12 --barometer", branch)
-
-            # If the job got triggered before, let's wait until alert time (3 min for job setup, so effectively it will be 9:40am)
-            while (PKDateUtilities.currentDateTime() < PKDateUtilities.currentDateTime(simulate=True,hour=MORNING_ALERT_HOUR,minute=MORNING_ALERT_MINUTE)):
-                sleep(60) # Wait for alert time
             resp = triggerRemoteScanAlertWorkflow(scanOptions, branch)
             if resp.status_code == 204:
                 sleep(5)
             else:
                 break
-    # Trigger intraday bid/ask build-up scanner only based on the volume source
-    if PKDateUtilities.currentDateTime() <= PKDateUtilities.currentDateTime(simulate=True,hour=MarketHours().closeHour,minute=MarketHours().closeMinute):
-        triggerRemoteScanAlertWorkflow("P:1:1:", branch)
-        triggerRemoteScanAlertWorkflow("P:1:5:", branch)
-        triggerRemoteScanAlertWorkflow("P:1:6:", branch)
-        triggerRemoteScanAlertWorkflow("P:1:8:", branch)
-        triggerRemoteScanAlertWorkflow("P:1:9:", branch)
-        triggerRemoteScanAlertWorkflow("P:1:10:", branch)
-        triggerRemoteScanAlertWorkflow("P:1:15:", branch)
-        triggerRemoteScanAlertWorkflow("P:1:21:", branch)
-
+    
     runIntradayAnalysisScans(branch=branch)
 
 def runIntradayAnalysisScans(branch="main"):
@@ -873,6 +872,9 @@ def triggerMiscellaneousTasks():
                 sleep(5)
 
 if __name__ == '__main__':
+    if args.barometer:
+        if PKDateUtilities.currentDateTime() <= PKDateUtilities.currentDateTime(simulate=True,hour=MORNING_ALERT_HOUR+1,minute=MORNING_ALERT_MINUTE):
+            triggerRemoteScanAlertWorkflow("X:12: --barometer", "main")
     if args.report:
         generateBacktestReportMainPage()
     if args.backtests:

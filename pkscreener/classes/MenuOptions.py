@@ -34,8 +34,8 @@ from pkscreener.classes import VERSION
 configManager = ConfigManager.tools()
 MENU_SEPARATOR = ""
 LINE_SEPARATOR = "\n"
-MAX_SUPPORTED_MENU_OPTION = 34
-MAX_MENU_OPTION = 42
+MAX_SUPPORTED_MENU_OPTION = 39
+MAX_MENU_OPTION = 50
 
 level0MenuDict = {
     "X": "Scanners",
@@ -56,33 +56,53 @@ level0MenuDict = {
     "Z": "Exit (Ctrl + C)",
 }
 level1_index_options_sectoral= {
-    "1": "Nifty 50 (^NSEI)                                  ",
-    "2": "BSE Sensex (^BSESN)",
-    "3": "Nifty Auto (^CNXAUTO)                             ",
-    "4": "Nifty Bank (^NSEBANK)",
-    "5": "Nifty Consumption (^CNXCONSUM)                    ",
-    "6": "Nifty Energy (^CNXENERGY)",
-    "7": "Nifty Financial Services (NIFTY_FIN_SERVICE.NS)   ",
-    "8": "Nifty Financial Services 25/50 (^CNXFIN)",
-    "9": "Nifty FMCG (^CNXFMCG)                             ",
-    "10": "Nifty Healthcare (NIFTY_HEALTHCARE.NS)",
-    "11": "Nifty IT (^CNXIT)                                ",
-    "12": "Nifty Infra (^CNXINFRA)",
-    "13": "Nifty Media (^CNXMEDIA)                           ",
-    "14": "Nifty Metal (^CNXMETAL)",
-    "15": "Nifty Pharma (^CNXPHARMA)                        ",
-    "16": "Nifty Private Bank (NIFTY_PVT_BANK.NS)",
-    "17": "Nifty PSU Bank (^CNXPSUBANK)                     ",
-    "18": "Nifty Realty (^CNXREALTY)",
-    "19": "Nifty Service Sector (^CNXSERVICE)               ",
-    "20": "Nifty MidCap 50 (^NSEMDCP50)",
-    "21": "Nifty MidCap 100 (NIFTY_MIDCAP_100.NS)           ",
-    "22": "Nifty MidCap 100 (NIFTY_LARGEMID_250.NS)",
-    "23": "Nifty 100 ESG (NIFTY100_ESG.NS)                  ",
-    "24": "Nifty Consumer Durables (NIFTY_CONSR_DURBL.NS)",
-    "25": "Nifty Oil and Gas (NIFTY_OIL_AND_GAS.NS)         ",
-    "26": "Nifty MidSmall Healthcare (NIFTY_MIDSML_HLTH.NS)",
-    "27": "All of the above",
+    "1": "BSE Sensex (^BSESN)                               ",
+    "2": "Nifty 50 (^NSEI)                                  ",
+    "3": "NIFTY 100 (^CNX100)                               ",
+    "4": "Nifty 100 ESG Sector Leaders (NIFTY100_ESG.NS)    ",
+    "5": "NIFTY 200 (^CNX200)                               ",
+    "6": "NIFTY 500 (^CNX500)                               ",
+    "7": "NIFTY500 MULTICAP 50:25:25 (NIFTY500_MULTICAP.NS) ",
+    "8": "NIFTY ALPHA 50 (NIFTYALPHA50.NS)                  ",
+    "9": "Nifty Auto (^CNXAUTO)                             ",
+    "10": "Nifty Bank (^NSEBANK)                            ",
+    "11": "NIFTY COMMODITIES (^CNXCMDT)                     ",
+    "12": "Nifty Consumer Durables (NIFTY_CONSR_DURBL.NS)   ",
+    "13": "Nifty Consumption (^CNXCONSUM)                   ",
+    "14": "NIFTY CPSE (NIFTY_CPSE.NS)                       ",
+    "15": "Nifty Energy (^CNXENERGY)                        ",
+    "16": "Nifty Financial Services 25/50 (^CNXFIN)         ",
+    "17": "Nifty Financial Services (NIFTY_FIN_SERVICE.NS)  ",
+    "18": "Nifty FMCG (^CNXFMCG)                            ",
+    "19": "Nifty Healthcare (NIFTY_HEALTHCARE.NS)           ",
+    "20": "Nifty IT (^CNXIT)                                ",
+    "21": "Nifty Infra (^CNXINFRA)                          ",
+    "22": "Nifty Large and MidCap 250 (NIFTY_LARGEMID_250.NS)",
+    "23": "Nifty Media (^CNXMEDIA)                          ",
+    "24": "Nifty Metal (^CNXMETAL)                          ",
+    "25": "NIFTY MICROCAP 250 (NIFTY_MICROCAP250.NS)        ",
+    "26": "Nifty MidCap 50 (^NSEMDCP50)                     ",
+    "27": "Nifty MidCap 100 (NIFTY_MIDCAP_100.NS)           ",
+    "28": "NIFTY MIDCAP 150 (NIFTYMIDCAP150.NS)             ",
+    "29": "NIFTY MIDCAP SELECT (NIFTY_MID_SELECT.NS)        ",
+    "30": "NIFTY MIDSMALLCAP 400 (NIFTYMIDSML400.NS)        ",
+    "31": "Nifty MidSmall Healthcare (NIFTY_MIDSML_HLTH.NS) ",
+    "32": "NIFTY MNC (^CNXMNC)                              ",
+    "33": "NIFTY NEXT 50 (^NSMIDCP)                         ",
+    "34": "Nifty Oil and Gas (NIFTY_OIL_AND_GAS.NS)         ",
+    "35": "Nifty Pharma (^CNXPHARMA)                        ",
+    "36": "Nifty Private Bank (NIFTY_PVT_BANK.NS)           ",
+    "37": "NIFTY PSE (^CNXPSE)                              ",
+    "38": "Nifty PSU Bank (^CNXPSUBANK)                     ",
+    "39": "Nifty Realty (^CNXREALTY)                        ",
+    "40": "Nifty Service Sector (^CNXSERVICE)               ",
+    "41": "NIFTY SMALLCAP 50 (NIFTYSMLCAP50.NS)             ",
+    "42": "NIFTY SMALLCAP 100 (^CNXSC)                      ",
+    "43": "NIFTY SMALLCAP 250 (NIFTYSMLCAP250.NS)           ",
+    "44": "NIFTY TOTAL MARKET (NIFTY_TOTAL_MKT.NS)          ",
+    "45": "INDIA VIX (^INDIAVIX)                            ",
+
+    "46": "All of the above",
 }
 level1_P_MenuDict = {
     "1": "Predefined Piped Scanners",
@@ -90,60 +110,64 @@ level1_P_MenuDict = {
     "3": "Run Piped Scans Saved So Far",
     "M": "Back to the Top/Main menu",
 }
-PREDEFINED_SCAN_MENU_KEYS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20", "21", "22", "23"]
+PREDEFINED_SCAN_MENU_KEYS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20", "21", "22", "23", "24", "25"]
 PREDEFINED_SCAN_MENU_TEXTS = [
-    "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross     ",
-    "Volume Scanners | High Momentum | ATR Cross",
-    "Volume Scanners | High Momentum                                    ",
-    "Volume Scanners | ATR Cross",
-    "Volume Scanners | High Bid/Ask Build Up                            ",
-    "Volume Scanners | ATR Cross | ATR Trailing Stops",
-    "Volume Scanners | ATR Trailing Stops                               ",
-    "High Momentum | ATR Cross",
-    "High Momentum | ATR Trailing Stop                                  ",
-    "ATR Cross | ATR Trailing Stop",
-    "TTM Sqeeze Buy | Intraday RSI b/w 0 to 54                          ",
-    "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross | Intraday RSI b/w 0 to 54",
-    "Volume Scanners | ATR Cross | Intraday RSI b/w 0 to 54             ",
-    "VCP (Mark Minervini) | Chart Patterns | MA Support",
-    "VCP | Chart Patterns | MA Support                                  ",
-    "Already Breaking out | VCP (Minervini) | Chart Patterns | MA Support",
-    "ATR Trailing Stops | VCP (Minervini)                               ",
-    "VCP | ATR Trailing Stops",
-    "Nifty 50,Nifty Bank | VCP | ATR Trailing Stops                     ",
-    "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross | VCP | ATR Trailing Stops",
-    "BullCross-MA | Fair Value Buy Opportunities                        ",
-    "VCP | Chart Patterns | MA Support | Bullish AVWAP",
-    "VCP (Mark Minervini) | Chart Patterns | MA Support | Bullish AVWAP ",
+    "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross     ",  # 1
+    "Volume Scanners | High Momentum | ATR Cross",                          # 2
+    "Volume Scanners | High Momentum                                    ",  # 3
+    "Volume Scanners | ATR Cross",                                          # 4
+    "Volume Scanners | High Bid/Ask Build Up                            ",  # 5
+    "Volume Scanners | ATR Cross | ATR Trailing Stops",                     # 6
+    "Volume Scanners | ATR Trailing Stops                               ",  # 7
+    "High Momentum | ATR Cross",                                            # 8
+    "High Momentum | ATR Trailing Stop                                  ",  # 9
+    "ATR Cross | ATR Trailing Stop",                                        # 10
+    "TTM Sqeeze Buy | RSI b/w 0 to 54                                   ",  # 11
+    "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross | RSI b/w 0 to 54", # 12
+    "Volume Scanners | ATR Cross | RSI b/w 0 to 54                      ",  # 13
+    "VCP (Mark Minervini) | Chart Patterns | MA Support",                   # 14
+    "VCP | Chart Patterns | MA Support                                  ",  # 15
+    "Already Breaking out | VCP (Minervini) | Chart Patterns | MA Support", # 16
+    "ATR Trailing Stops | VCP (Minervini)                               ",  # 17
+    "VCP | ATR Trailing Stops",                                             # 18
+    "Nifty 50,Nifty Bank | VCP | ATR Trailing Stops                     ",  # 19
+    "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross | VCP | ATR Trailing Stops", # 20
+    "BullCross-MA | Fair Value Buy Opportunities                        ",  # 21
+    "VCP | Chart Patterns | MA Support | Bullish AVWAP",                    # 22
+    "VCP (Mark Minervini) | Chart Patterns | MA Support | Bullish AVWAP ",  # 23
+    "BullCross-VWAP | Volume Scanners",                                     # 24
+    "BullCross-VWAP | ATR Cross | ATR Trailing Stop                     ",  # 25
 ]
 level2_P_MenuDict = {}
 for key in PREDEFINED_SCAN_MENU_KEYS:
     level2_P_MenuDict[key] = PREDEFINED_SCAN_MENU_TEXTS[int(key)-1]
 level2_P_MenuDict["M"] = "Back to the Top/Main menu"
 PREDEFINED_SCAN_MENU_VALUES =[
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:27:'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:27:'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:29:'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:27:>|X:12:30:1:'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:12:30:1:'",
-    "--systemlaunched -a y -e -o 'X:12:31:>|X:0:27:'",
-    "--systemlaunched -a y -e -o 'X:12:31:>|X:0:30:1:'",
-    "--systemlaunched -a y -e -o 'X:12:27:>|X:0:30:1:'",
-    "--systemlaunched -a y -e -o 'X:12:7:6:1:>|X:0:5:0:54:i 1m'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:>|X:0:5:0:54:i 1m'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:27:>|X:0:5:0:54:i 1m'",
-    "--systemlaunched -a y -e -o 'X:12:7:8:>|X:12:7:9:1:1:'",
-    "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:7:9:1:1:'",
-    "--systemlaunched -a y -e -o 'X:12:2:>|X:12:7:8:>|X:12:7:9:1:1:'",
-    "--systemlaunched -a y -e -o 'X:12:30:1:>|X:12:7:8:'",
-    "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:30:1:'",
-    "--systemlaunched -a y -e -o 'X:0:0:^NSEI,^NSEBANK:>|X:12:7:4:>|X:12:30:1:'",
-    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:>|X:12:7:4:>|X:12:30:1:'",
-    "--systemlaunched -a y -e -o 'X:12:7:9:5:>|X:12:21:8:'",
-    "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:7:9:1:1:>|X:12:34:'",
-    "--systemlaunched -a y -e -o 'X:12:7:8:>|X:12:7:9:1:1:>|X:12:34:'",
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:'", # 1
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:27:'",          # 2
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:'",                   # 3
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:27:'",                   # 4
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:29:'",                   # 5
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:27:>|X:12:30:1:'",       # 6
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:12:30:1:'",                # 7
+    "--systemlaunched -a y -e -o 'X:12:31:>|X:0:27:'",                      # 8
+    "--systemlaunched -a y -e -o 'X:12:31:>|X:0:30:1:'",                    # 9
+    "--systemlaunched -a y -e -o 'X:12:27:>|X:0:30:1:'",                    # 10
+    "--systemlaunched -a y -e -o 'X:12:7:6:1:>|X:0:5:0:54:'",               # 11
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:>|X:0:5:0:54:'", # 12
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:27:>|X:0:5:0:54:'",      # 13
+    "--systemlaunched -a y -e -o 'X:12:7:8:>|X:12:7:9:1:1:'",               # 14
+    "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:7:9:1:1:'",               # 15
+    "--systemlaunched -a y -e -o 'X:12:2:>|X:12:7:8:>|X:12:7:9:1:1:'",      # 16
+    "--systemlaunched -a y -e -o 'X:12:30:1:>|X:12:7:8:'",                  # 17
+    "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:30:1:'",                  # 18
+    "--systemlaunched -a y -e -o 'X:0:0:^NSEI,^NSEBANK:>|X:12:7:4:>|X:12:30:1:'", # 19
+    "--systemlaunched -a y -e -o 'X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:>|X:12:7:4:>|X:12:30:1:'",  # 20
+    "--systemlaunched -a y -e -o 'X:12:7:9:5:>|X:12:21:8:'",                # 21
+    "--systemlaunched -a y -e -o 'X:12:7:4:>|X:12:7:9:1:1:>|X:12:34:'",     # 22
+    "--systemlaunched -a y -e -o 'X:12:7:8:>|X:12:7:9:1:1:>|X:12:34:'",     # 23
+    "--systemlaunched -a y -e -o 'X:12:7:9:7:>|X:0:9:2.5:'",                # 24
+    "--systemlaunched -a y -e -o 'X:12:7:9:7:>|X:0:31:>|X:0:30:1:'",        # 25
 ]
 PREDEFINED_PIPED_MENU_OPTIONS = []
 for option in PREDEFINED_SCAN_MENU_VALUES:
@@ -204,7 +228,7 @@ level1_X_MenuDict = {
     "10": "Nifty Midcap 100",
     "11": "Nifty Midcap 150 ",
     "12": "Nifty (All Stocks)",
-    "13": "Newly Listed (IPOs in last 2 Year)           ",
+    "13": "Newly Listed (IPOs in last 1 Year)           ",
     "14": "F&O Stocks Only", #Discontinued:  https://nsearchives.nseindia.com/content/circulars/FAOP61157.pdf
     "15": "NASDAQ",
     "M": "Back to the Top/Main menu",
@@ -246,11 +270,12 @@ level2_X_MenuDict = {
     "32": "Intraday Breakout/Breakdown setup",
     "33": "Potential Profitable setups    ",
     "34": "Bullish Anchored-VWAP",
-    # "32": "High Momentum(14)",
-    # "28": "Extremely bullish daily close      ",
-    # "29": "Rising RSI                      ",
-    # "30": "RSI entering bullish territory",
-    "42": "Show Last Screened Results",
+    "35": "Perfect Short Sells (Futures)  ",
+    "36": "Probable Short Sells (Futures)",
+    "37": "Short Sell Candidates (Volume SMA)",
+    "38": "Intraday Short Sell (PSAR / Volume SMA)",
+    "39": "IPO-Lifetime First day bullish break",
+    "50": "Show Last Screened Results",
     "M": "Back to the Top/Main menu",
     "Z": "Exit (Ctrl + C)",
 }
@@ -287,6 +312,7 @@ level4_X_ChartPattern_MASignalMenuDict = {
     "4": "BearCross MA",
     "5": "BullCross MA",
     "6": "MA-Resist",
+    "7": "BullCross VWAP",
     "0": "Cancel",
 }
 
@@ -1053,7 +1079,7 @@ class menus:
     ):
         menuText = self.fromDictionary(
             level2_X_MenuDict,
-            renderExceptionKeys=["0", "42", "M"],
+            renderExceptionKeys=["0", str(MAX_MENU_OPTION), "M"],
             renderStyle=renderStyle
             if renderStyle is not None
             else MenuRenderStyle.TWO_PER_ROW,
