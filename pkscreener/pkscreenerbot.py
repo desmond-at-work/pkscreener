@@ -130,14 +130,15 @@ _updater = None
 
 TOP_LEVEL_SCANNER_MENUS = ["X", "B", "MI","DV", "P"]
 TOP_LEVEL_SCANNER_SKIP_MENUS = ["M", "S", "G", "C", "T", "D", "I", "E", "U", "L", "Z", "P"]
-INDEX_SKIP_MENUS = ["W","E","M","Z","0","2","3","4","6","7","9","10","13"]
-SCANNER_SKIP_MENUS_1_TO_6 = ["0","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","M","Z"]
-SCANNER_SKIP_MENUS_7_TO_12 = ["0","1","2","3","4","5","6","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","M","Z"]
-SCANNER_SKIP_MENUS_13_TO_18 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","M","Z"]
-SCANNER_SKIP_MENUS_19_TO_25 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","22","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","M","Z"]
-SCANNER_SKIP_MENUS_26_TO_31 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","32","33","34","35","36","37","38","39","40","41","42","M","Z"]
-SCANNER_SKIP_MENUS_32_TO_38 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","39","40","41","42","M","Z"]
-SCANNER_MENUS_WITH_NO_SUBMENUS = ["1","2","3","10","11","12","13","14","15","16","17","18","19","20","21","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41"]
+INDEX_SKIP_MENUS = ["W","E","M","Z","0","2","3","4","6","7","9","10","S"]
+SCANNER_SKIP_MENUS_1_TO_6 = ["0","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
+SCANNER_SKIP_MENUS_7_TO_12 = ["0","1","2","3","4","5","6","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
+SCANNER_SKIP_MENUS_13_TO_18 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
+SCANNER_SKIP_MENUS_19_TO_25 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","22","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
+SCANNER_SKIP_MENUS_26_TO_31 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
+SCANNER_SKIP_MENUS_32_TO_37 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","38","39","40","41","42","43","44","45","M","Z"]
+SCANNER_SKIP_MENUS_38_TO_43 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","44","45","M","Z"]
+SCANNER_MENUS_WITH_NO_SUBMENUS = ["1","2","3","10","11","12","13","14","15","16","17","18","19","20","21","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45"]
 SCANNER_MENUS_WITH_SUBMENU_SUPPORT = ["6", "7", "21"]
 SCANNER_SUBMENUS_CHILDLEVEL_SUPPORT = {"6":[ "7","10"], "7":[ "3","6","9"]}
 
@@ -145,7 +146,7 @@ INDEX_COMMANDS_SKIP_MENUS_SCANNER = ["W", "E", "M", "Z", "S"]
 INDEX_COMMANDS_SKIP_MENUS_BACKTEST = ["W", "E", "M", "Z", "S", "N", "0", "15"]
 PIPED_SCAN_SKIP_COMMAND_MENUS =["2", "3", "M", "0"]
 UNSUPPORTED_COMMAND_MENUS =["22","42","M","Z","0"]
-SUPPORTED_COMMAND_MENUS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41"]
+SUPPORTED_COMMAND_MENUS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45"]
 
 def initializeIntradayTimer():
     try:
@@ -238,11 +239,12 @@ def start(update: Update, context: CallbackContext, updatedResults=None, monitor
             menuText,
             reply_markup=reply_markup,
         )
-    context.bot.send_message(
-        chat_id=int(f"-{Channel_Id}"),
-        text=f"Name: {user.first_name}, Username:@{user.username} with ID: {str(user.id)} started using the bot!\n{chosenBotMenuOption}",
-        parse_mode="HTML",
-    )
+    if Channel_Id is not None and len(str(Channel_Id)) > 0:
+        context.bot.send_message(
+            chat_id=int(f"-{Channel_Id}"),
+            text=f"Name: {user.first_name}, Username:@{user.username} with ID: {str(user.id)} started using the bot!\n{chosenBotMenuOption}",
+            parse_mode="HTML",
+        )
     # Tell ConversationHandler that we're in state `FIRST` now
     return START_ROUTES
 
@@ -296,7 +298,7 @@ def launchIntradayMonitor():
             monitor_proc = Popen(appArgs)
             logger.info(f"{launcher} -a Y -m 'X' -p --telegram launched")
         else:
-            result_outputs = "Monitor is running, but the results are being prepared. Try again in next few seconds."
+            result_outputs = "Intraday Monitor is already running/launching, but the results are being prepared. Try again in the next few seconds."
             logger.info(f"{launcher} -a Y -m 'X' -p --telegram already running")
     except Exception as e:
         result_outputs = "Hmm...It looks like you caught us taking a break! Try again later :-)"
@@ -522,14 +524,30 @@ def Level2(update: Update, context: CallbackContext) -> str:
         elif selection[2] == "P5":
             menuText = m2.renderForMenu(
                 m1.find(selection[1]),
-                skip=SCANNER_SKIP_MENUS_32_TO_38,
+                skip=SCANNER_SKIP_MENUS_32_TO_37,
+                renderStyle=MenuRenderStyle.STANDALONE,
+            )
+            menuText = menuText + "\n\nP6 > More Options"
+            menuText = menuText + "\nH > Home"
+            mns = m2.renderForMenu(
+                m1.find(selection[1]),
+                skip=SCANNER_SKIP_MENUS_32_TO_37,
+                asList=True,
+                renderStyle=MenuRenderStyle.STANDALONE,
+            )
+            mns.append(menu().create("P6", "More Options", 2))
+            mns.append(menu().create("H", "Home", 2))
+        elif selection[2] == "P6":
+            menuText = m2.renderForMenu(
+                m1.find(selection[1]),
+                skip=SCANNER_SKIP_MENUS_38_TO_43,
                 renderStyle=MenuRenderStyle.STANDALONE,
             )
             menuText = menuText + "\n"
             menuText = menuText + "\nH > Home"
             mns = m2.renderForMenu(
                 m1.find(selection[1]),
-                skip=SCANNER_SKIP_MENUS_32_TO_38,
+                skip=SCANNER_SKIP_MENUS_38_TO_43,
                 asList=True,
                 renderStyle=MenuRenderStyle.STANDALONE,
             )
@@ -591,7 +609,7 @@ def Level2(update: Update, context: CallbackContext) -> str:
             update=update,
         )
     try:
-        if optionChoices != "":
+        if optionChoices != "" and Channel_Id is not None and len(str(Channel_Id)) > 0:
             context.bot.send_message(
                 chat_id=int(f"-{Channel_Id}"),
                 text=f"Name: <b>{query.from_user.first_name}</b>, Username:@{query.from_user.username} with ID: <b>@{str(query.from_user.id)}</b> submitted scan request <b>{optionChoices}</b> to the bot!",
@@ -796,13 +814,13 @@ def error_handler(update: object, context: CallbackContext) -> None:
 
     try:
         # Finally, send the message
-        if "telegram.error.Conflict" not in message:
+        if "telegram.error.Conflict" not in message and Channel_Id is not None and len(str(Channel_Id)) > 0:
             context.bot.send_message(
                 chat_id=int(f"-{Channel_Id}"), text=message, parse_mode="HTML"
             )
     except Exception:# pragma: no cover
         try:
-            if "telegram.error.Conflict" not in tb_string:
+            if "telegram.error.Conflict" not in tb_string and Channel_Id is not None and len(str(Channel_Id)) > 0:
                 context.bot.send_message(
                     chat_id=int(f"-{Channel_Id}"),
                     text=tb_string,
@@ -1136,9 +1154,10 @@ def sendRequestSubmitted(optionChoices, update, context):
 def shareUpdateWithChannel(update, context, optionChoices=""):
     query = update.message or update.callback_query
     message = f"Name: <b>{query.from_user.first_name}</b>, Username:@{query.from_user.username} with ID: <b>@{str(query.from_user.id)}</b> began using ({optionChoices}) the bot!"
-    context.bot.send_message(
-        chat_id=int(f"-{Channel_Id}"), text=message, parse_mode="HTML"
-    )
+    if Channel_Id is not None and len(str(Channel_Id)) > 0:
+        context.bot.send_message(
+            chat_id=int(f"-{Channel_Id}"), text=message, parse_mode="HTML"
+        )
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -1166,9 +1185,10 @@ def help_command(update: Update, context: CallbackContext) -> None:
         )  #  \n\nThis bot restarts every hour starting at 5:30am IST until 10:30pm IST to keep it running on free servers. If it does not respond, please try again in a minutes to avoid the restart duration!
         query = update.message
         message = f"Name: <b>{query.from_user.first_name}</b>, Username:@{query.from_user.username} with ID: <b>@{str(query.from_user.id)}</b> began using the bot!"
-        context.bot.send_message(
-            chat_id=int(f"-{Channel_Id}"), text=message, parse_mode="HTML"
-        )
+        if Channel_Id is not None and len(str(Channel_Id)) > 0:
+            context.bot.send_message(
+                chat_id=int(f"-{Channel_Id}"), text=message, parse_mode="HTML"
+            )
 
 
 def _shouldAvoidResponse(update):

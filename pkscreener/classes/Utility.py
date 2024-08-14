@@ -876,7 +876,8 @@ class tools:
                 PKScheduler.scheduleTasks(tasksList=tasksList, 
                                         label=f"Downloading latest data [{configManager.period},{configManager.duration}] (Total={len(stockCodes)} records in {len(tasksList)} batches){'Be Patient!' if len(stockCodes)> 2000 else ''}",
                                         timeout=(5+2.5*configManager.longTimeout*(4 if downloadOnly else 1)), # 5 sec additional time for multiprocessing setup
-                                        minAcceptableCompletionPercentage=(100 if downloadOnly else 100))
+                                        minAcceptableCompletionPercentage=(100 if downloadOnly else 100),
+                                        showProgressBars=configManager.logsEnabled)
             for task in tasksList:
                 if task.result is not None:
                     for stock in task.userData:
@@ -1200,7 +1201,7 @@ class tools:
         if response is not None and response.upper() != "N":
             pastDateString = f"{pastDate}_to_" if pastDate is not None else ""
             filename = (
-                "PKScreener-result_"
+                f"PKS_{sheetName}_"
                 + pastDateString
                 + PKDateUtilities.currentDateTime().strftime("%d-%m-%y_%H.%M.%S")
                 + ".xlsx"
@@ -1499,9 +1500,9 @@ class tools:
                     input(
                         colorText.BOLD
                         + colorText.WARN
-                        + "\n[+] Enter Percentage within which all MA/EMAs should be (Ideal: 0.1-2%)? (Default=0.5): "
+                        + "\n[+] Enter Percentage within which all MA/EMAs should be (Ideal: 0.1-2%)? (Default=0.8): "
                         + colorText.END
-                    ) or "0.5"
+                    ) or "0.8"
                 )
                 return (resp, percent / 100.0)
             if resp >= 0 and resp <= 9:

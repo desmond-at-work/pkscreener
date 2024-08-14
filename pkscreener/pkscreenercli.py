@@ -207,6 +207,11 @@ if __name__ == "__main__":
         required=False,
     )
     argParser.add_argument(
+        "--progressstatus",
+        help="Pass default progress status that you'd like to get displayed when running the scans",
+        required=False,
+    )
+    argParser.add_argument(
         "--runintradayanalysis",
         action="store_true",
         help="Run analysis for morning vs EoD LTP values",
@@ -272,9 +277,14 @@ if __name__ == "__main__":
         help="Piped Menus",
         required=False,
     )
-    # args = " -a Y -e -p -u 6186237493 -o X:12:30::D:D:D:D:D".split(" ")
-    # argsv = argParser.parse_known_args(args=args)
-    argsv = argParser.parse_known_args()
+
+    def get_debug_args():
+        return None
+        # return " -a Y -e -l -o X:12:30:D:D:D:D:D".split(" ")
+
+    args = get_debug_args()
+    argsv = argParser.parse_known_args(args=args)
+    # argsv = argParser.parse_known_args()
     args = argsv[0]
     # if sys.argv[0].endswith(".py"):
     #     args.monitor = 'X'
@@ -287,34 +297,39 @@ if __name__ == "__main__":
     elapsed_time = None
     configManager = ConfigManager.tools()
 
+
 def exitGracefully():
-    from PKDevTools.classes import Archiver
-    from pkscreener.globals import resetConfigToDefault
-    filePath = None
     try:
-        filePath = os.path.join(Archiver.get_user_outputs_dir(), "monitor_outputs")
-    except:
-        pass
-    if filePath is None:
-        return
-    index = 0
-    while index < configManager.maxDashboardWidgetsPerRow*configManager.maxNumResultRowsInMonitor:
+        from PKDevTools.classes import Archiver
+        from pkscreener.globals import resetConfigToDefault
+        filePath = None
         try:
-            os.remove(f"{filePath}_{index}.txt")
+            filePath = os.path.join(Archiver.get_user_outputs_dir(), "monitor_outputs")
         except:
             pass
-        index += 1
+        if filePath is None:
+            return
+        index = 0
+        while index < configManager.maxDashboardWidgetsPerRow*configManager.maxNumResultRowsInMonitor:
+            try:
+                os.remove(f"{filePath}_{index}.txt")
+            except:
+                pass
+            index += 1
 
-    argsv = argParser.parse_known_args()
-    args = argsv[0]
-    if args is not None and args.options is not None and not args.options.upper().startswith("T"):
-        resetConfigToDefault()
-        
-    if "PKDevTools_Default_Log_Level" in os.environ.keys():
-        if args is None or (args is not None and args.options is not None and "|" not in args.options):
-            del os.environ['PKDevTools_Default_Log_Level']
-    configManager.logsEnabled = False
-    configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
+        argsv = argParser.parse_known_args()
+        args = argsv[0]
+        if args is not None and args.options is not None and not args.options.upper().startswith("T"):
+            resetConfigToDefault()
+            
+        if "PKDevTools_Default_Log_Level" in os.environ.keys():
+            if args is None or (args is not None and args.options is not None and "|" not in args.options):
+                del os.environ['PKDevTools_Default_Log_Level']
+        configManager.logsEnabled = False
+        configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
+    except RuntimeError:
+        OutputControls().printOutput(f"{colorText.WARN}If you're running from within docker, please run like this:{colorText.END}\n{colorText.FAIL}docker run -it pkjmesra/pkscreener:latest\n{colorText.END}")
+        pass
 
 def logFilePath():
     try:
@@ -389,10 +404,16 @@ def runApplication():
     except:
         pass
     global results, resultStocks, plainResults, dbTimestamp, elapsed_time, start_time
-    # args = " -a Y -e -p -u 6186237493 -o X:12:30::D:D:D:D:D".split(" ")
-    # argsv = argParser.parse_known_args(args=args)
-    argsv = argParser.parse_known_args()
+    from pkscreener.classes.MenuOptions import menus, PREDEFINED_PIPED_MENU_OPTIONS,PREDEFINED_SCAN_MENU_VALUES
+    args = get_debug_args()
+    argsv = argParser.parse_known_args(args=args)
+    # argsv = argParser.parse_known_args()
     args = argsv[0]
+    if args.user is None:
+        from PKDevTools.classes.Telegram import get_secrets
+        Channel_Id, _, _, _ = get_secrets()
+        if Channel_Id is not None and len(str(Channel_Id)) > 0:
+            args.user = int(f"-{Channel_Id}")
     if args.triggertimestamp is None:
         args.triggertimestamp = int(PKDateUtilities.currentDateTimestamp())
     else:
@@ -408,29 +429,45 @@ def runApplication():
         args.options = args.options.replace("::",":").replace("\"","").replace("'","")
         if args.options.upper().startswith("C") or "C:" in args.options.upper():
             args.runintradayanalysis = True
+        try:
+            if args.systemlaunched:
+                choices = f"--systemlaunched -a y -e -o '{args.options.replace('C:','X:').replace('D:','')}'"
+                indexNum = PREDEFINED_SCAN_MENU_VALUES.index(choices)
+                choices = f"{'P_1_'+str(indexNum +1) if '>|' in choices else choices}"
+                args.progressstatus = f"[+] {choices} => Running {choices}"
+        except:
+            choices = ""
+            pass
+        
     if args.runintradayanalysis:
-        from pkscreener.classes.MenuOptions import menus, PREDEFINED_PIPED_MENU_OPTIONS
         maxdisplayresults = configManager.maxdisplayresults
         configManager.maxdisplayresults = 2000
         configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
         runOptions = []
+        otherMenus = []
         if len(args.options.split(":")) >= 4:
             runOptions = [args.options]
         else:
-            runOptions =  menus.allMenus(topLevel="C", index=12)
-            runOptions.extend(PREDEFINED_PIPED_MENU_OPTIONS)
-        optionalFinalOutcome_df = None
+            runOptions = PREDEFINED_PIPED_MENU_OPTIONS
+            otherMenus =  menus.allMenus(topLevel="C", index=12)
+            if len(otherMenus) > 0:
+                runOptions.extend(otherMenus)
+        import pandas as pd
+        optionalFinalOutcome_df = pd.DataFrame()
         import pkscreener.classes.Utility as Utility
         import pandas as pd
         # Delete any existing data from the previous run.
         configManager.deleteFileWithPattern(pattern="stock_data_*.pkl")
         analysis_index = 1
         for runOption in runOptions:
-            OutputControls().printOutput(
-                colorText.GREEN
-                + f"[+] Running Intraday Analysis: {analysis_index} of {len(runOptions)}..."
-                + colorText.END
-            )
+            try:
+                runOptionName = f"--systemlaunched -a y -e -o '{runOption.replace('C:','X:').replace('D:','D:')}'"
+                indexNum = PREDEFINED_SCAN_MENU_VALUES.index(runOptionName)
+                runOptionName = f"{'[+] P_1_'+str(indexNum +1) if '>|' in runOption else runOption}"
+            except:
+                runOptionName = ""
+                pass
+            args.progressstatus = f"{runOptionName} => Running Intraday Analysis: {analysis_index} of {len(runOptions)}..."
             analysisOptions = runOption.split("|")
             analysisOptions[-1] = analysisOptions[-1].replace("X:","C:")
             runOption = "|".join(analysisOptions)
@@ -448,9 +485,10 @@ def runApplication():
                 while runPipedScans:
                     runPipedScans = pipeResults(plainResults,args)
                     if runPipedScans:
-                        results, plainResults = main(userArgs=args)
-                optionalFinalOutcome_df = results
-                if "EoDDiff" not in optionalFinalOutcome_df.columns:
+                        results, plainResults = main(userArgs=args,optionalFinalOutcome_df=optionalFinalOutcome_df)
+                if results is not None and len(results) >= len(optionalFinalOutcome_df):
+                    optionalFinalOutcome_df = results
+                if optionalFinalOutcome_df is not None and "EoDDiff" not in optionalFinalOutcome_df.columns:
                     # Somehow the file must have been corrupted. Let's re-download
                     configManager.deleteFileWithPattern(pattern="stock_data_*.pkl")
                     configManager.deleteFileWithPattern(pattern="intraday_stock_data_*.pkl")
@@ -471,23 +509,27 @@ def runApplication():
                 optionalFinalOutcome_df.drop('FairValue', axis=1, inplace=True, errors="ignore")
                 df_grouped = optionalFinalOutcome_df.groupby("Stock")
                 for stock, df_group in df_grouped:
-                    if stock == "PORTFOLIO":
+                    if stock == "BASKET":
                         if final_df is None:
-                            final_df = df_group[["Pattern","LTP","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
+                            final_df = df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
                         else:
-                            final_df = pd.concat([final_df, df_group[["Pattern","LTP","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
+                            final_df = pd.concat([final_df, df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
             except:
                 pass
             if final_df is not None and not final_df.empty:
                 with pd.option_context('mode.chained_assignment', None):
+                    final_df = final_df[["Pattern","LTP@Alert","LTP","EoDDiff","SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff"]]
                     final_df.rename(
                         columns={
-                            "LTP": "Morning Portfolio",
-                            "SqrOffLTP": "SqrOff Portfolio",
-                            "EoDLTP": "EoD Portfolio",
+                            "Pattern": "Scan Name",
+                            "LTP@Alert": "Basket Value@Alert",
+                            "LTP": "Basket Value@EOD",
+                            "SqrOffLTP": "Basket Value@SqrOff",
+                            "DayHigh": "Basket Value@DayHigh",
                             },
                             inplace=True,
                         )
+                    final_df.dropna(inplace=True)
                 mark_down = colorText.miniTabulator().tabulate(
                                     final_df,
                                     headers="keys",
@@ -495,14 +537,18 @@ def runApplication():
                                     showindex = False
                                 ).encode("utf-8").decode(Utility.STD_ENCODING)
                 OutputControls().printOutput(mark_down)
-                sendQuickScanResult(menuChoiceHierarchy="IntradayAnalysis",
-                                    user="-1001785195297",
-                                    tabulated_results=mark_down,
-                                    markdown_results=mark_down,
-                                    caption="IntradayAnalysis - Morning alert vs Market Close",
-                                    pngName= f"PKS_IA_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
-                                    pngExtension= ".png"
-                                    )
+                from PKDevTools.classes.Telegram import get_secrets
+                Channel_Id, _, _, _ = get_secrets()
+                if Channel_Id is not None and len(str(Channel_Id)) > 0:
+                    sendQuickScanResult(menuChoiceHierarchy="IntradayAnalysis",
+                                        user=int(f"-{Channel_Id}"),
+                                        tabulated_results=mark_down,
+                                        markdown_results=mark_down,
+                                        caption="IntradayAnalysis - Morning alert vs Market Close",
+                                        pngName= f"PKS_IA_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
+                                        pngExtension= ".png",
+                                        forceSend=True
+                                        )
     else:
         if args.barometer:
             sendGlobalMarketBarometer(userArgs=args)
@@ -675,7 +721,7 @@ def pipeResults(prevOutput,args):
     return False
 
 def pkscreenercli():
-    global originalStdOut
+    global originalStdOut, args
     if sys.platform.startswith("darwin"):
         try:
             multiprocessing.set_start_method("fork")
@@ -711,7 +757,11 @@ def pkscreenercli():
         if args.log or configManager.logsEnabled:
             setupLogger(shouldLog=True, trace=args.testbuild)
             if not args.prodbuild and args.answerdefault is None:
-                input("Press <Enter> to continue...")
+                try:
+                    input("Press <Enter> to continue...")
+                except EOFError:
+                    OutputControls().printOutput(f"{colorText.WARN}If you're running from within docker, please run like this:{colorText.END}\n{colorText.FAIL}docker run -it pkjmesra/pkscreener:latest\n{colorText.END}")
+                    pass
         else:
             if "PKDevTools_Default_Log_Level" in os.environ.keys():
                 del os.environ['PKDevTools_Default_Log_Level']
@@ -764,11 +814,11 @@ def pkscreenercli():
                 if os.path.exists(filePath):
                     default_logger().info("monitor_outputs_1.txt already exists! This means an instance may already be running. Exiting now...")
                     # Since the file exists, it means, there is another instance running
-                    sys.exit(0)
+                    return
             else:
                 # It should have been launched only during the trading hours
                 default_logger().info("--telegram option must be launched ONLY during NSE trading hours. Exiting now...")
-                sys.exit(0)
+                return
         # Check and see if we're running only the telegram bot
         if args.bot:
             from pkscreener import pkscreenerbot
