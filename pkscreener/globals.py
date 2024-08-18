@@ -439,7 +439,7 @@ def handleSecondaryMenuChoices(
                 launcher = f'"{sys.argv[0]}"' if " " in sys.argv[0] else sys.argv[0]
                 requestingUser = f" -u {userPassedArgs.user}" if userPassedArgs.user is not None else ""
                 enableLog = f" -l" if userPassedArgs.log else ""
-                enableTelegramMode = f" --telegram" if userPassedArgs.telegram else ""
+                enableTelegramMode = f" --telegram" if userPassedArgs is not None and userPassedArgs.telegram else ""
                 launcher = f"python3.11 {launcher}" if (launcher.endswith(".py\"") or launcher.endswith(".py")) else launcher
                 OutputControls().printOutput(f"{colorText.GREEN}Launching PKScreener in quick backtest mode. If it does not launch, please try with the following:{colorText.END}\n{colorText.FAIL}{launcher} --backtestdaysago {int(backtestDaysAgo)}{requestingUser}{enableLog}{enableTelegramMode}{colorText.END}\n{colorText.WARN}Press Ctrl + C to exit quick backtest mode.{colorText.END}")
                 sleep(2)
@@ -906,7 +906,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 scannerOptionQuoted = scannerOption.replace("'",'"')
                 requestingUser = f" -u {userPassedArgs.user}" if userPassedArgs.user is not None else ""
                 enableLog = f" -l" if userPassedArgs.log else ""
-                enableTelegramMode = f" --telegram" if userPassedArgs.telegram else ""
+                enableTelegramMode = f" --telegram" if userPassedArgs is not None and userPassedArgs.telegram else ""
                 backtestParam = f" --backtestdaysago {userPassedArgs.backtestdaysago}" if userPassedArgs.backtestdaysago else ""
                 OutputControls().printOutput(f"{colorText.GREEN}Launching PKScreener with piped scanners. If it does not launch, please try with the following:{colorText.END}\n{colorText.FAIL}{launcher} {scannerOptionQuoted}{requestingUser}{enableLog}{backtestParam}{enableTelegramMode}{colorText.END}")
                 sleep(2)
@@ -1166,17 +1166,18 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             if maLength == 0 and respChartPattern in [1, 2, 3, 6, 9]:
                 maLength = Utility.tools.promptChartPatternSubMenu(selectedMenu, respChartPattern)
             if maLength == 4 and respChartPattern == 3: # Super-confluence setup
-                configManager.superConfluenceMaxReviewDays = input(
-                    f"[+] Max number of review days for super-confluence-checks. (number)(Optimal = 3-7, Current: {colorText.FAIL}{configManager.superConfluenceMaxReviewDays}{colorText.END}): "
-                ) or configManager.superConfluenceMaxReviewDays
-                configManager.superConfluenceEMAPeriods = input(
-                    f"[+] Comma separated EMA periods for super-confluence-crossovers in the same order. (numbers)(Optimal = 8,21,55, Current: {colorText.FAIL}{configManager.superConfluenceEMAPeriods}{colorText.END}): "
-                ) or configManager.superConfluenceEMAPeriods
-                enable200SMA = input(
-                    f"[+] Enable enforcing SMA-200 check for super-confluence? When enabled, at least one of 8/21/55-EMA should be lower than SMA-200 [Y/N, Current: {colorText.FAIL}{'y' if configManager.superConfluenceEnforce200SMA else 'n'}{colorText.END}]: "
-                ) or ('y' if configManager.superConfluenceEnforce200SMA else 'n')
-                configManager.superConfluenceEnforce200SMA = False if "y" not in str(enable200SMA).lower() else True
-                configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
+                if len(options) <= 5:
+                    configManager.superConfluenceMaxReviewDays = input(
+                        f"[+] Max number of review days for super-confluence-checks. (number)(Optimal = 3-7, Current: {colorText.FAIL}{configManager.superConfluenceMaxReviewDays}{colorText.END}): "
+                    ) or configManager.superConfluenceMaxReviewDays
+                    configManager.superConfluenceEMAPeriods = input(
+                        f"[+] Comma separated EMA periods for super-confluence-crossovers in the same order. (numbers)(Optimal = 8,21,55, Current: {colorText.FAIL}{configManager.superConfluenceEMAPeriods}{colorText.END}): "
+                    ) or configManager.superConfluenceEMAPeriods
+                    enable200SMA = input(
+                        f"[+] Enable enforcing SMA-200 check for super-confluence? When enabled, at least one of 8/21/55-EMA should be lower than SMA-200 [Y/N, Current: {colorText.FAIL}{'y' if configManager.superConfluenceEnforce200SMA else 'n'}{colorText.END}]: "
+                    ) or ('y' if configManager.superConfluenceEnforce200SMA else 'n')
+                    configManager.superConfluenceEnforce200SMA = False if "y" not in str(enable200SMA).lower() else True
+                    configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
         if (
             respChartPattern is None
             or insideBarToLookback is None
@@ -1671,7 +1672,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                             import traceback
                             traceback.print_exc()
                         pass
-        if (menuOption in ["X","C"] and userPassedArgs.monitor is None) or "|" not in userPassedArgs.options:
+        if (menuOption in ["X","C"] and userPassedArgs.monitor is None) or ("|" not in userPassedArgs.options and menuOption not in ["B"]):
             finishScreening(
                 downloadOnly,
                 testing,
@@ -1684,17 +1685,18 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 user,
             )
 
-        if menuOption == "B" and backtest_df is not None and len(backtest_df) > 0:
-            Utility.tools.clearScreen()
-            # Let's do the portfolio calculation first
-            df_xray = prepareGroupedXRay(backtestPeriod, backtest_df)
-            summary_df, sorting, sortKeys = FinishBacktestDataCleanup(backtest_df, df_xray)
-            while sorting:
-                sorting = showSortedBacktestData(backtest_df, summary_df, sortKeys)
-            if defaultAnswer is None:
-                input("Press <Enter> to continue...")
-        elif menuOption == "B":
-            OutputControls().printOutput("Finished backtesting with no results to show!")
+        if menuOption == "B":
+            if backtest_df is not None and len(backtest_df) > 0:
+                Utility.tools.clearScreen()
+                # Let's do the portfolio calculation first
+                df_xray = prepareGroupedXRay(backtestPeriod, backtest_df)
+                summary_df, sorting, sortKeys = FinishBacktestDataCleanup(backtest_df, df_xray)
+                while sorting:
+                    sorting = showSortedBacktestData(backtest_df, summary_df, sortKeys)
+                if defaultAnswer is None:
+                    input("Press <Enter> to continue...")
+            else:
+                OutputControls().printOutput("Finished backtesting with no results to show!")
         elif menuOption == "G":
             if defaultAnswer is None:
                 input("Press <Enter> to continue...")
@@ -1799,7 +1801,8 @@ def loadDatabaseOrFetch(downloadOnly, listStockCodes, menuOption, indexOption):
                     defaultAnswer=defaultAnswer,
                     forceLoad=(menuOption in ["X", "B", "G", "S"]),
                     stockCodes = listStockCodes,
-                    exchangeSuffix = "" if (indexOption == 15 or (configManager.defaultIndex == 15 and indexOption == 0)) else ".NS"
+                    exchangeSuffix = "" if (indexOption == 15 or (configManager.defaultIndex == 15 and indexOption == 0)) else ".NS",
+                    userDownloadOption = menuOption
             )
     if menuOption not in ["C"] and (userPassedArgs.monitor is not None or "|" in userPassedArgs.options) :#not configManager.isIntradayConfig() and configManager.calculatersiintraday:
         candleDuration = (userPassedArgs.intraday if (userPassedArgs is not None and userPassedArgs.intraday is not None) else "1m")
@@ -1813,7 +1816,8 @@ def loadDatabaseOrFetch(downloadOnly, listStockCodes, menuOption, indexOption):
                         forceLoad=(menuOption in ["X", "B", "G", "S"]),
                         stockCodes = listStockCodes,
                         isIntraday=True,
-                        exchangeSuffix = "" if (indexOption == 15 or (configManager.defaultIndex == 15 and indexOption == 0)) else ".NS"
+                        exchangeSuffix = "" if (indexOption == 15 or (configManager.defaultIndex == 15 and indexOption == 0)) else ".NS",
+                        userDownloadOption = menuOption
                 )
         resetConfigToDefault()
     loadedStockData = True
@@ -1839,7 +1843,8 @@ def getLatestTradeDateTime(stockDictPrimary):
     return lastTradeDate, lastTradeTime
 
 def FinishBacktestDataCleanup(backtest_df, df_xray):
-    showBacktestResults(df_xray, sortKey="Date", optionalName="Insights")
+    if df_xray is not None and len(df_xray) > 10:
+        showBacktestResults(df_xray, sortKey="Date", optionalName="Insights")
     summary_df = backtestSummary(backtest_df)
     backtest_df.loc[:, "Date"] = backtest_df.loc[:, "Date"].apply(
                 lambda x: x.replace("-", "/")
@@ -1912,7 +1917,7 @@ def addOrRunPipedMenus():
         scannerOptionQuoted = monitorOption.replace("'",'"').replace(":>",":D:D:D:>").replace("::",":")
         requestingUser = f" -u {userPassedArgs.user}" if userPassedArgs.user is not None else ""
         enableLog = f" -l" if userPassedArgs.log else ""
-        enableTelegramMode = f" --telegram" if userPassedArgs.telegram else ""
+        enableTelegramMode = f" --telegram" if userPassedArgs is not None and userPassedArgs.telegram else ""
         backtestParam = f" --backtestdaysago {userPassedArgs.backtestdaysago}" if userPassedArgs.backtestdaysago else ""
         runIntradayAnalysisParam = f" --runintradayanalysis" if shouldRunIntradayAnalysis else ""
         OutputControls().printOutput(f"{colorText.GREEN}Launching PKScreener with piped scanners. If it does not launch, please try with the following:{colorText.END}\n{colorText.FAIL}{launcher} -a Y -e -o {scannerOptionQuoted}{requestingUser}{enableLog}{backtestParam}{runIntradayAnalysisParam}{enableTelegramMode}{colorText.END}")
@@ -1945,31 +1950,34 @@ def prepareGroupedXRay(backtestPeriod, backtest_df):
                       long_running_fn_args=func_args)
         task.total = len(df_grouped)
         tasksList.append(task)
-    if 'RUNNER' not in os.environ.keys():
-        # if configManager.enablePortfolioCalculations:
-        # On Github CI, we may run out of memory because of saving results in
-        # shared multiprocessing dict.
-        PKScheduler.scheduleTasks(tasksList,f"Portfolio X-Ray for ({len(df_grouped)})", showProgressBars=False,timeout=600)
-    else:
-        # On Github CI, let's run synchronously.
+    try:
+        if 'RUNNER' not in os.environ.keys():
+            # if configManager.enablePortfolioCalculations:
+            # On Github CI, we may run out of memory because of saving results in
+            # shared multiprocessing dict.
+            PKScheduler.scheduleTasks(tasksList,f"Portfolio X-Ray for ({len(df_grouped)})", showProgressBars=False,timeout=600)
+        else:
+            # On Github CI, let's run synchronously.
+            for task in tasksList:
+                task.long_running_fn(*(task,))
         for task in tasksList:
-            task.long_running_fn(*(task,))
-    for task in tasksList:
-        p_df = task.result
-        if p_df is not None:
-            if df_xray is not None:
-                df_xray = pd.concat([df_xray, p_df.copy()], axis=0)
-            else:
-                df_xray = p_df.copy()
+            p_df = task.result
+            if p_df is not None:
+                if df_xray is not None:
+                    df_xray = pd.concat([df_xray, p_df.copy()], axis=0)
+                else:
+                    df_xray = p_df.copy()
             # Let's drop the columns no longer required for backtest report
 
-    removedUnusedColumns(None, backtest_df, ["Consol.", "Breakout", "RSI", "Pattern", "CCI"], userArgs=userPassedArgs)
-    df_xray = df_xray.replace(np.nan, "", regex=True)
-    df_xray = PortfolioXRay.xRaySummary(df_xray)
-    df_xray.loc[:, "Date"] = df_xray.loc[:, "Date"].apply(
-                lambda x: x.replace("-", "/")
-            )
-    
+        removedUnusedColumns(None, backtest_df, ["Consol.", "Breakout", "RSI", "Pattern", "CCI"], userArgs=userPassedArgs)
+        df_xray = df_xray.replace(np.nan, "", regex=True)
+        df_xray = PortfolioXRay.xRaySummary(df_xray)
+        df_xray.loc[:, "Date"] = df_xray.loc[:, "Date"].apply(
+                    lambda x: x.replace("-", "/")
+                )
+    except Exception as e:
+        default_logger().debug(e,exc_info=True)
+        pass
     return df_xray
 
 def showSortedBacktestData(backtest_df, summary_df, sortKeys):
@@ -2454,7 +2462,10 @@ def printNotifySaveScreenedResults(
             message=f"No scan results found for {menuChoiceHierarchy}", user=user
         )
     if not testing:
-        Utility.tools.setLastScreenedResults(screenResults, saveResults, f"{PKScanRunner.getFormattedChoices(userPassedArgs,selectedChoice)}_{recordDate if recordDate is not None else ''}")
+        runOptionName = PKScanRunner.getFormattedChoices(userPassedArgs,selectedChoice)
+        if (":0:" in runOptionName or "_0_" in runOptionName) and userPassedArgs.progressstatus is not None:
+            runOptionName = userPassedArgs.progressstatus.split("=>")[0].split("[+] ")[1].strip()
+        Utility.tools.setLastScreenedResults(screenResults, saveResults, f"{runOptionName}_{recordDate if recordDate is not None else ''}")
 
 def sendKiteBasketOrderReviewDetails(saveResultsTrimmed,runOptionName,caption,user):
     kite_file_path = os.path.join(Archiver.get_user_outputs_dir(), f"{runOptionName}_Kite_Basket.html")
@@ -3018,7 +3029,6 @@ def saveNotifyResultsFile(
         )
         if defaultAnswer is None:
             input("Press <Enter> to continue...")
-    return filename
 
 def sendGlobalMarketBarometer(userArgs=None):
     from pkscreener.classes import Barometer
@@ -3026,6 +3036,8 @@ def sendGlobalMarketBarometer(userArgs=None):
     gmbPath = Barometer.getGlobalMarketBarometerValuation()
     try:
         if gmbPath is not None:
+            gmbFileSize = os.stat(gmbPath).st_size if os.path.exists(gmbPath) else 0
+            OutputControls().printOutput(f"Barometer report created with size {gmbFileSize} @ {gmbPath}")
             sendMessageToTelegramChannel(
                 message=None,
                 photo_filePath=gmbPath,
@@ -3033,13 +3045,17 @@ def sendGlobalMarketBarometer(userArgs=None):
                 user=(userArgs.user if userArgs is not None else None),
             )
             os.remove(gmbPath)
-    except:
+    except Exception as e:
+        default_logger().debug(e,exc_info=True)
         pass
 
 def sendMessageToTelegramChannel(
     message=None, photo_filePath=None, document_filePath=None, caption=None, user=None, mediagroup=False
 ):
     global userPassedArgs, test_messages_queue, media_group_dict
+    if ("RUNNER" not in os.environ.keys() and (userPassedArgs is not None and not userPassedArgs.log)) or (userPassedArgs is not None and userPassedArgs.telegram):
+        return
+    
     if user is None and userPassedArgs is not None and userPassedArgs.user is not None:
         user = userPassedArgs.user
     if not mediagroup:
@@ -3108,7 +3124,7 @@ def sendMessageToTelegramChannel(
         if user != channel_userID and not userPassedArgs.monitor:
             # Send an update to dev channel
             send_message(
-                f"Responded back to userId:{user} with {caption}.{message} [{userPassedArgs.options}]",
+                f"Responded back to userId:{user} with {caption}.{message} [{userPassedArgs.options.replace(':D','')}]",
                 userID="-1001785195297",
             )
 
@@ -3119,11 +3135,12 @@ def sendTestStatus(screenResults, label, user=None):
     )
 
 
-def showBacktestResults(backtest_df, sortKey="Stock", optionalName="backtest_result"):
+def showBacktestResults(backtest_df:pd.DataFrame, sortKey="Stock", optionalName="backtest_result"):
     global menuChoiceHierarchy, selectedChoice, userPassedArgs, elapsed_time
     pd.set_option("display.max_rows", 800)
     # pd.set_option("display.max_columns", 20)
-    if backtest_df is None or backtest_df.empty or len(backtest_df) < 1:
+    if backtest_df is None or backtest_df.empty or len(backtest_df) < 10:
+        OutputControls().printOutput("Empty backtest dataframe encountered! Cannot generate the backtest report")
         return
     backtest_df.drop_duplicates(inplace=True)
     summaryText = f"Auto-generated in {round(elapsed_time,2)} sec. as of {PKDateUtilities.currentDateTime().strftime('%d-%m-%y %H:%M:%S IST')}\n{menuChoiceHierarchy.replace('Backtests','Growth of 10K' if optionalName=='Insights' else 'Backtests')}"
@@ -3143,13 +3160,25 @@ def showBacktestResults(backtest_df, sortKey="Stock", optionalName="backtest_res
             summaryText = f"{summaryText}\nOverall Summary of (correctness of) Strategy Prediction Positive outcomes:"
     tabulated_text = ""
     if backtest_df is not None and len(backtest_df) > 0:
-        tabulated_text = colorText.miniTabulator().tabulate(
-            backtest_df,
-            headers="keys",
-            tablefmt=colorText.No_Pad_GridFormat,
-            showindex=False,
-            maxcolwidths=Utility.tools.getMaxColumnWidths(backtest_df)
-        ).encode("utf-8").decode(STD_ENCODING)
+        try:
+            tabulated_text = colorText.miniTabulator().tabulate(
+                backtest_df,
+                headers="keys",
+                tablefmt=colorText.No_Pad_GridFormat,
+                showindex=False,
+                maxcolwidths=Utility.tools.getMaxColumnWidths(backtest_df)
+            ).encode("utf-8").decode(STD_ENCODING)
+        except ValueError:
+            OutputControls().printOutput("ValueError! Going ahead without any column width restrictions!")
+            # Maybe we were not able to fit the column width. Let's get rid of the column width restriction
+            tabulated_text = colorText.miniTabulator().tabulate(
+                backtest_df,
+                headers="keys",
+                tablefmt=colorText.No_Pad_GridFormat,
+                showindex=False,
+                # maxcolwidths=Utility.tools.getMaxColumnWidths(backtest_df)
+            ).encode("utf-8").decode(STD_ENCODING)
+            pass
     OutputControls().printOutput(colorText.FAIL + summaryText + colorText.END + "\n")
     OutputControls().printOutput(tabulated_text + "\n")
     choices, filename = getBacktestReportFilename(sortKey, optionalName)
