@@ -690,11 +690,11 @@ def labelDataForPrinting(screenResults, saveResults, configManager, volumeRatio,
         elif executeOption == 7:
             if reversalOption in [3]:
                 if "SuperConfSort" in saveResults.columns:
-                    sortKey = ["MA-Signal", "SuperConfSort"]
-                    ascending = [True, True]
+                    sortKey = ["SuperConfSort"]
+                    ascending = [False]
                 else:
-                    sortKey = ["Volume","MA-Signal"]
-                    ascending = [False, False]
+                    sortKey = ["Volume"]
+                    ascending = [False]
         elif executeOption == 23:
             sortKey = ["bbands_ulr_ratio_max5"] if "bbands_ulr_ratio_max5" in screenResults.columns else ["Volume"]
             ascending = [False]
@@ -1129,11 +1129,12 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                         if str(options[5]).isnumeric():
                             maLength = int(options[5])
                         elif str(options[5]).upper() == "D":
-                            maLength = 1 # Conf. up
-                elif defaultAnswer == "Y" and user is not None:
-                    # bot mode
-                    insideBarToLookback = 7 if respChartPattern in [1, 2] else 0.02
-                    maLength = 4 if respChartPattern in [3] else 0
+                            maLength = 4 # Super Conf. up
+                if defaultAnswer == "Y" and user is not None:
+                    if maLength == 0:
+                        # bot mode
+                        maLength = 4 if respChartPattern in [3] else 0
+                    insideBarToLookback = 7 if respChartPattern in [1, 2] else (0.008 if (maLength == 4 and respChartPattern ==3) else 0.02)
                 else:
                     (
                         respChartPattern,
