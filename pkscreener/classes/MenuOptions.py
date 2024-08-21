@@ -110,7 +110,8 @@ level1_P_MenuDict = {
     "3": "Run Piped Scans Saved So Far",
     "M": "Back to the Top/Main menu",
 }
-PREDEFINED_SCAN_MENU_KEYS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20", "21", "22", "23", "24", "25"]
+PREDEFINED_SCAN_ALERT_MENU_KEYS = ["1","5","6","8","18","22","25","27"]
+PREDEFINED_SCAN_MENU_KEYS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20", "21", "22", "23", "24", "25","26","27"]
 PREDEFINED_SCAN_MENU_TEXTS = [
     "Volume Scanners | High Momentum | Breaking Out Now | ATR Cross     ",  # 1
     "Volume Scanners | High Momentum | ATR Cross",                          # 2
@@ -137,6 +138,8 @@ PREDEFINED_SCAN_MENU_TEXTS = [
     "VCP (Mark Minervini) | Chart Patterns | MA Support | Bullish AVWAP ",  # 23
     "BullCross-VWAP | Volume Scanners",                                     # 24
     "BullCross-VWAP | ATR Cross | ATR Trailing Stop                     ",  # 25
+    "Super-Confluence | ATR Trailing Stop                               ",  # 26
+    "BullCross-VWAP | Super-Confluence                                  ",  # 27
 ]
 level2_P_MenuDict = {}
 for key in PREDEFINED_SCAN_MENU_KEYS:
@@ -168,6 +171,10 @@ PREDEFINED_SCAN_MENU_VALUES =[
     "--systemlaunched -a y -e -o 'X:12:7:8:>|X:12:7:9:1:1:>|X:12:34:'",     # 23
     "--systemlaunched -a y -e -o 'X:12:7:9:7:>|X:0:9:2.5:'",                # 24
     "--systemlaunched -a y -e -o 'X:12:7:9:7:>|X:0:31:>|X:0:30:1:'",        # 25
+    "--systemlaunched -a y -e -o 'X:12:7:3:0.008:4:>|X:0:30:1:'",           # 26
+    # Running super conf at the beginning will be faster because there will be less number of stocks.
+    # Running it at the end is essential because we want to see the dates of super-conf
+    "--systemlaunched -a y -e -o 'X:12:7:3:0.008:4:>|X:12:7:9:7:>|X:0:7:3:0.008:4:'", # 27
 ]
 PREDEFINED_PIPED_MENU_OPTIONS = []
 for option in PREDEFINED_SCAN_MENU_VALUES:
@@ -236,48 +243,48 @@ level1_X_MenuDict = {
 }
 level2_X_MenuDict = {
     "0": "Full Screening (Shows Technical Parameters without any criterion)",
-    "1": "Probable Breakouts/Breakdowns   ",
-    "2": "Today's Breakouts/Breakdowns",
-    "3": "Consolidating stocks            ",
+    "1": "Probable Breakouts/Breakdowns             ",
+    "2": "Today's Breakouts/Breakdowns              ",
+    "3": "Consolidating stocks                      ",
     "4": "Lowest Volume in last N-days (Early Breakout Detection)",
-    "5": "RSI screening                   ",
-    "6": "Reversal Signals",
-    "7": "Stocks making Chart Patterns    ",
-    "8": "CCI outside of the given range",
-    "9": "Volume gainers                  ",
-    "10": "Closing at least 2% up since last 3 days",
-    "11": "Short term bullish (Ichimoku)  ",
+    "5": "RSI screening                             ",
+    "6": "Reversal Signals                          ",
+    "7": "Stocks making Chart Patterns              ",
+    "8": "CCI outside of the given range            ",
+    "9": "Volume gainers                            ",
+    "10": "Closing at least 2% up since last 3 days ",
+    "11": "Short term bullish (Ichimoku)            ",
     "12": "N-Minute Price & Volume breakout(Intraday)",
-    "13": "Bullish RSI & MACD             ",
-    "14": "NR4 Daily Today",
-    "15": "52 week low breakout(today)(Sell)",
-    "16": "10 days low breakout(Sell)",
-    "17": "52 week high breakout(today)     ",
-    "18": "Bullish Aroon(14) Crossover",
-    "19": "MACD Histogram x below 0 (Sell) ",
-    "20": "Bullish for next day",
-    "21": "MF/FIIs Popular Stocks         ",
-    "22": "View Stock Performance         ",
-    "23": "Breaking out now               ",
-    "24": "Higher Highs,Lows & Close (SuperTrend)",
-    "25": "Lower Highs,Lows (Watch for Rev.)",
-    "26": "Stocks with stock-split/bonus/dividends",
-    "27": "ATR Cross                      ",
-    "28": "Bullish Higher Opens           ",
-    "29": "Intraday Bid/Ask Build-up      ",
-    "30": "ATR Trailing Stops(Swing Paper Trading)",
-    "31": "High Momentum(RSI,MFI,CCI)     ",
-    "32": "Intraday Breakout/Breakdown setup",
-    "33": "Potential Profitable setups    ",
-    "34": "Bullish Anchored-VWAP",
-    "35": "Perfect Short Sells (Futures)  ",
-    "36": "Probable Short Sells (Futures)",
-    "37": "Short Sell Candidates (Volume SMA)",
-    "38": "Intraday Short Sell (PSAR / Volume SMA)",
-    "39": "IPO-Lifetime First day bullish break",
-    "50": "Show Last Screened Results",
-    "M": "Back to the Top/Main menu",
-    "Z": "Exit (Ctrl + C)",
+    "13": "Bullish RSI & MACD                       ",
+    "14": "NR4 Daily Today                          ",
+    "15": "52 week low breakout(today)(Sell)        ",
+    "16": "10 days low breakout(Sell)               ",
+    "17": "52 week high breakout(today)             ",
+    "18": "Bullish Aroon(14) Crossover              ",
+    "19": "MACD Histogram x below 0 (Sell)          ",
+    "20": "Bullish for next day                     ",
+    "21": "MF/FIIs Popular Stocks                   ",
+    "22": "View Stock Performance                   ",
+    "23": "Breaking out now                         ",
+    "24": "Higher Highs,Lows & Close (SuperTrend)   ",
+    "25": "Lower Highs,Lows (Watch for Rev.)        ",
+    "26": "Stocks with stock-split/bonus/dividends  ",
+    "27": "ATR Cross                                ",
+    "28": "Bullish Higher Opens                     ",
+    "29": "Intraday Bid/Ask Build-up                ",
+    "30": "ATR Trailing Stops(Swing Paper Trading)  ",
+    "31": "High Momentum(RSI,MFI,CCI)               ",
+    "32": "Intraday Breakout/Breakdown setup        ",
+    "33": "Potential Profitable setups              ",
+    "34": "Bullish Anchored-VWAP                    ",
+    "35": "Perfect Short Sells (Futures)            ",
+    "36": "Probable Short Sells (Futures)           ",
+    "37": "Short Sell Candidates (Volume SMA)       ",
+    "38": "Intraday Short Sell (PSAR / Volume SMA)  ",
+    "39": "IPO-Lifetime First day bullish break     ",
+    "50": "Show Last Screened Results               ",
+    "M": "Back to the Top/Main menu                 ",
+    "Z": "Exit (Ctrl + C)                           ",
 }
 level3_X_Reversal_MenuDict = {
     "1": "Buy Signals (Bullish Reversal)",
@@ -328,7 +335,7 @@ level4_X_ChartPattern_Confluence_MenuDict = {
     "1": "Confluence up / GoldenCrossOver / DMA50 / DMA200",
     "2": "Confluence Down / DeadCrossOver",
     "3": "Any/All (Confluence up/down/Crossovers)",
-    "4": "8,21,55-EMA / 200-SMA Super-Confluence",
+    "4": "8,21,55-EMA / 200-SMA Super-Confluence (BTST-Buy at close, Sell early next day)",
     "0": "Cancel",
 }
 

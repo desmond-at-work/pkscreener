@@ -59,12 +59,13 @@ from telegram import __version__ as TG_VER
 start_time = datetime.now()
 MINUTES_2_IN_SECONDS = 120
 OWNER_USER = "Itsonlypk"
+APOLOGY_TEXT = "Apologies! The @nse_pkscreener_bot is NOT available for the time being! We are working with our host GitHub and other data source providers to sort out pending invoices and restore the services soon! Thanks for your patience and support! 🙏"
 
 from PKDevTools.classes.Telegram import get_secrets
 from PKDevTools.classes.PKDateUtilities import PKDateUtilities
 from PKDevTools.classes.ColorText import colorText
 from PKDevTools.classes.MarketHours import MarketHours
-from pkscreener.classes.MenuOptions import MenuRenderStyle, menu, menus
+from pkscreener.classes.MenuOptions import MenuRenderStyle, menu, menus,MAX_MENU_OPTION
 from pkscreener.classes.WorkflowManager import run_workflow
 from pkscreener.globals import showSendConfigInfo, showSendHelpInfo
 import pkscreener.classes.ConfigManager as ConfigManager
@@ -131,13 +132,13 @@ _updater = None
 TOP_LEVEL_SCANNER_MENUS = ["X", "B", "MI","DV", "P"]
 TOP_LEVEL_SCANNER_SKIP_MENUS = ["M", "S", "G", "C", "T", "D", "I", "E", "U", "L", "Z", "P"]
 INDEX_SKIP_MENUS = ["W","E","M","Z","0","2","3","4","6","7","9","10","S"]
-SCANNER_SKIP_MENUS_1_TO_6 = ["0","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
-SCANNER_SKIP_MENUS_7_TO_12 = ["0","1","2","3","4","5","6","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
-SCANNER_SKIP_MENUS_13_TO_18 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
-SCANNER_SKIP_MENUS_19_TO_25 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","22","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
-SCANNER_SKIP_MENUS_26_TO_31 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z"]
-SCANNER_SKIP_MENUS_32_TO_37 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","38","39","40","41","42","43","44","45","M","Z"]
-SCANNER_SKIP_MENUS_38_TO_43 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","44","45","M","Z"]
+SCANNER_SKIP_MENUS_1_TO_6 = ["0","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z",str(MAX_MENU_OPTION)]
+SCANNER_SKIP_MENUS_7_TO_12 = ["0","1","2","3","4","5","6","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z",str(MAX_MENU_OPTION)]
+SCANNER_SKIP_MENUS_13_TO_18 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z",str(MAX_MENU_OPTION)]
+SCANNER_SKIP_MENUS_19_TO_25 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","22","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z",str(MAX_MENU_OPTION)]
+SCANNER_SKIP_MENUS_26_TO_31 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","32","33","34","35","36","37","38","39","40","41","42","43","44","45","M","Z",str(MAX_MENU_OPTION)]
+SCANNER_SKIP_MENUS_32_TO_37 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","38","39","40","41","42","43","44","45","M","Z",str(MAX_MENU_OPTION)]
+SCANNER_SKIP_MENUS_38_TO_43 = ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","44","45","M","Z",str(MAX_MENU_OPTION)]
 SCANNER_MENUS_WITH_NO_SUBMENUS = ["1","2","3","10","11","12","13","14","15","16","17","18","19","20","21","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45"]
 SCANNER_MENUS_WITH_SUBMENU_SUPPORT = ["6", "7", "21"]
 SCANNER_SUBMENUS_CHILDLEVEL_SUPPORT = {"6":[ "7","10"], "7":[ "3","6","9"]}
@@ -145,7 +146,7 @@ SCANNER_SUBMENUS_CHILDLEVEL_SUPPORT = {"6":[ "7","10"], "7":[ "3","6","9"]}
 INDEX_COMMANDS_SKIP_MENUS_SCANNER = ["W", "E", "M", "Z", "S"]
 INDEX_COMMANDS_SKIP_MENUS_BACKTEST = ["W", "E", "M", "Z", "S", "N", "0", "15"]
 PIPED_SCAN_SKIP_COMMAND_MENUS =["2", "3", "M", "0"]
-UNSUPPORTED_COMMAND_MENUS =["22","42","M","Z","0"]
+UNSUPPORTED_COMMAND_MENUS =["22","42","M","Z","0",str(MAX_MENU_OPTION)]
 SUPPORTED_COMMAND_MENUS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45"]
 
 def initializeIntradayTimer():
@@ -165,6 +166,12 @@ def initializeIntradayTimer():
         launchIntradayMonitor()
         pass
 
+def sanitiseTexts(text):
+    MAX_MSG_LENGTH = 4096
+    if len(text) > MAX_MSG_LENGTH:
+        return text[:MAX_MSG_LENGTH]
+    return text
+
 def start(update: Update, context: CallbackContext, updatedResults=None, monitorIndex=0,chosenBotMenuOption="") -> str:
     """Send message on `/start`."""
     global bot_available
@@ -182,7 +189,13 @@ def start(update: Update, context: CallbackContext, updatedResults=None, monitor
     user = updateCarrier.from_user
     logger.info("User %s started the conversation.", user.first_name)
     if not bot_available:
-        updatedResults = "Apologies! The @nse_pkscreener_bot is NOT available for the time being! We are working with our host GitHub and other data source providers to sort out pending invoices and restore the services soon! Thanks for your patience and support! 🙏"
+        # Sometimes, either the payment does not go through or 
+        # it takes time to process the last month's payment if
+        # done in the past 24 hours while the last date was today.
+        # If that happens, we won't be able to run bots or scanners
+        # without incurring heavy charges. Let's run in the 
+        # unavailable mode instead until this gets fixed.
+        updatedResults = APOLOGY_TEXT
     # Build InlineKeyboard where each button has a displayed text
     # and a string as callback_data
     # The keyboard is a list of button rows, where each row is in turn
@@ -236,7 +249,7 @@ def start(update: Update, context: CallbackContext, updatedResults=None, monitor
         )
     elif update.message is not None:
         update.message.reply_text(
-            menuText,
+            sanitiseTexts(menuText),
             reply_markup=reply_markup,
         )
     if Channel_Id is not None and len(str(Channel_Id)) > 0:
@@ -349,12 +362,20 @@ def XScanners(update: Update, context: CallbackContext) -> str:
         return START_ROUTES
     data = query.data.upper().replace("CX", "X").replace("CB", "B").replace("CG", "G").replace("CMI", "MI")
     if data[0:2] not in TOP_LEVEL_SCANNER_MENUS:
+        # Someone is trying to send commands we do not support
         return start(update, context)
     global bot_available
     if not bot_available:
+        # Bot is running but is running in unavailable mode.
+        # Sometimes, either the payment does not go through or 
+        # it takes time to process the last month's payment if
+        # done in the past 24 hours while the last date was today.
+        # If that happens, we won't be able to run bots or scanners
+        # without incurring heavy charges. Let's run in the 
+        # unavailable mode instead until this gets fixed.
         start(update, context)
         return START_ROUTES
-    if data.startswith("MI"):
+    if data.startswith("MI"): # Intraday monitor
         monitorIndex = int(data.split("_")[1])
         result_outputs, filePath = launchIntradayMonitor()
         filePath = f"{filePath}_{monitorIndex}.txt"
@@ -431,6 +452,13 @@ def Level2(update: Update, context: CallbackContext) -> str:
         return START_ROUTES
     global bot_available
     if not bot_available:
+        # Bot is running but is running in unavailable mode.
+        # Sometimes, either the payment does not go through or 
+        # it takes time to process the last month's payment if
+        # done in the past 24 hours while the last date was today.
+        # If that happens, we won't be able to run bots or scanners
+        # without incurring heavy charges. Let's run in the 
+        # unavailable mode instead until this gets fixed.
         start(update, context)
         return START_ROUTES
     if selection[len(selection)-1].upper() == "H":
@@ -668,7 +696,7 @@ def launchScreener(options, user, context, optionChoices, update):
             responseText = f"{responseText}\n\nStock-wise: https://pkjmesra.github.io/PKScreener/Backtest-Reports/PKScreener_{optionChoices}_backtest_result_StockSorted.html"
             responseText = f"{responseText}\n\nOther Reports: https://pkjmesra.github.io/PKScreener/BacktestReports.html"
             if update is not None and update.message is not None:
-                update.message.reply_text(responseText)
+                update.message.reply_text(sanitiseTexts(responseText))
             else:
                 responseText = f"{responseText}\n\nClick /start if you want to restart the session."
                 update.callback_query.edit_message_text(
@@ -684,7 +712,7 @@ def launchScreener(options, user, context, optionChoices, update):
             while optionChoices.endswith("_"):
                 optionChoices = optionChoices[:-1]
             run_workflow(
-                optionChoices, str(user.id), str(options.upper()), workflowType="X"
+                optionChoices, str(user.id), str(options.upper().replace(":7:3:4",":7:3:0.008:4")), workflowType="X"
             )
         elif str(optionChoices.upper()).startswith("G"):
             optionChoices = optionChoices.replace(" ", "").replace(">", "_")
@@ -833,6 +861,10 @@ def error_handler(update: object, context: CallbackContext) -> None:
 def command_handler(update: Update, context: CallbackContext) -> None:
     if _shouldAvoidResponse(update):
         return
+    global bot_available
+    if not bot_available:
+        start(update, context)
+        return START_ROUTES
     msg = update.effective_message
     m = re.match("\s*/([0-9a-zA-Z_-]+)\s*(.*)", msg.text)
     cmd = m.group(1).lower()
@@ -879,7 +911,7 @@ def command_handler(update: Update, context: CallbackContext) -> None:
             cmdText = f"{cmdText}\n\nFor option 0 <Screen stocks by the stock name>, please type in the command in the following format\n/X_0 SBIN\n or \n/X_0_0 SBIN\nand hit send where SBIN is the NSE stock code.For multiple stocks, you can type in \n/X_0 SBIN,ICICIBANK,OtherStocks\nYou can put in any number of stocks separated by space or comma(,)."
         """Send a message when the command /help is issued."""
         cmdText = f"{cmdText}\n\nClick /start if you want to restart the session."
-        update.message.reply_text(f"Choose an option:\n{cmdText}")
+        update.message.reply_text(sanitiseTexts(f"Choose an option:\n{cmdText}"))
         return START_ROUTES
 
     if update.message is None:
@@ -912,7 +944,7 @@ def command_handler(update: Update, context: CallbackContext) -> None:
                 cmdText = "For option 0 <Screen stocks by the stock name>, please type in the command in the following format\n/X_0 SBIN or /X_0_0 SBIN and hit send where SBIN is the NSE stock code.For multiple stocks, you can type in /X_0 SBIN,ICICIBANK,OtherStocks . You can put in any number of stocks separated by space or comma(,)."
             """Send a message when the command /help is issued."""
             cmdText = f"{cmdText}\n\nClick /start if you want to restart the session."
-            update.message.reply_text(f"Choose an option:\n{cmdText}")
+            update.message.reply_text(sanitiseTexts(f"Choose an option:\n{cmdText}"))
             return START_ROUTES
 
     if "p_" in cmd:
@@ -945,7 +977,7 @@ def command_handler(update: Update, context: CallbackContext) -> None:
                     f"{cmdText}\n\n{cmd.commandTextKey()} for {cmd.commandTextLabel()}"
                 )
             cmdText = f"{cmdText}\n\nClick /start if you want to restart the session."
-            update.message.reply_text(f"Choose an option:\n{cmdText}")
+            update.message.reply_text(sanitiseTexts(f"Choose an option:\n{cmdText}"))
             return START_ROUTES
         elif len(selection) == 3:
             options = ":".join(selection)
@@ -998,7 +1030,7 @@ def command_handler(update: Update, context: CallbackContext) -> None:
                 cmdText = "For option 0 <Screen stocks by the stock name>, please type in the command in the following format\n/X_0 SBIN or /X_0_0 SBIN and hit send where SBIN is the NSE stock code.For multiple stocks, you can type in /X_0 SBIN,ICICIBANK,OtherStocks. You can put in any number of stocks separated by space or comma(,)."
                 """Send a message when the command /help is issued."""
                 cmdText = f"{cmdText}\n\nClick /start if you want to restart the session."
-                update.message.reply_text(f"Choose an option:\n{cmdText}")
+                update.message.reply_text(sanitiseTexts(f"Choose an option:\n{cmdText}"))
                 return START_ROUTES
             cmds = m2.renderForMenu(
                 selectedMenu=selectedMenu,
@@ -1012,7 +1044,7 @@ def command_handler(update: Update, context: CallbackContext) -> None:
                     f"{cmdText}\n\n{cmd.commandTextKey()} for {cmd.commandTextLabel()}"
                 )
             cmdText = f"{cmdText}\n\nClick /start if you want to restart the session."
-            update.message.reply_text(f"Choose an option:\n{cmdText}")
+            update.message.reply_text(sanitiseTexts(f"Choose an option:\n{cmdText}"))
             return START_ROUTES
         elif len(selection) == 3:
             m0.renderForMenu(
@@ -1051,7 +1083,7 @@ def command_handler(update: Update, context: CallbackContext) -> None:
                 for cmd in cmds:
                     cmdText = f"{cmdText}\n\n{cmd.commandTextKey()} for {cmd.commandTextLabel()}"
                 cmdText = f"{cmdText}\n\nClick /start if you want to restart the session."
-                update.message.reply_text(f"Choose an option:\n{cmdText}")
+                update.message.reply_text(sanitiseTexts(f"Choose an option:\n{cmdText}"))
                 return START_ROUTES
             else:
                 if selection[2] == "4":  # Last N days
@@ -1110,7 +1142,7 @@ def command_handler(update: Update, context: CallbackContext) -> None:
                         for cmd in cmds:
                             cmdText = f"{cmdText}\n\n{cmd.commandTextKey()} for {cmd.commandTextLabel()}"
                         cmdText = f"{cmdText}\n\nClick /start if you want to restart the session."
-                        update.message.reply_text(f"Choose an option:\n{cmdText}")
+                        update.message.reply_text(sanitiseTexts(f"Choose an option:\n{cmdText}"))
                         return START_ROUTES
 
             options = ":".join(selection)
@@ -1138,13 +1170,13 @@ def command_handler(update: Update, context: CallbackContext) -> None:
         # )
         # sendRequestSubmitted(cmd.upper(), update=update, context=context)
         return START_ROUTES
-    update.message.reply_text(f"{cmd.upper()} : Not implemented yet!")
+    update.message.reply_text(sanitiseTexts(f"{cmd.upper()} : Not implemented yet!"))
     help_command(update=update, context=context)
 
 
 def sendRequestSubmitted(optionChoices, update, context):
     menuText = f"Thank you for choosing {optionChoices}. You will receive the notification/results in about 1-2 minutes! \n\nConsider donating to help keep this project going:\nUPI: 8007162973@APL \nor\nhttps://github.com/sponsors/pkjmesra?frequency=one-time&sponsor=pkjmesra"
-    update.message.reply_text(menuText)
+    update.message.reply_text(sanitiseTexts(menuText))
     help_command(update=update, context=context)
     shareUpdateWithChannel(
         update=update, context=context, optionChoices=optionChoices
@@ -1181,7 +1213,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     if update is not None and update.message is not None:
         update.message.reply_text(
-            f"You can begin by typing in /start (Recommended) and hit send!\n\nOR\n\nChoose an option:\n{cmdText}\n\nWe recommend you start by clicking on this /start"
+            sanitiseTexts(f"You can begin by typing in /start (Recommended) and hit send!\n\nOR\n\nChoose an option:\n{cmdText}\n\nWe recommend you start by clicking on this /start")
         )  #  \n\nThis bot restarts every hour starting at 5:30am IST until 10:30pm IST to keep it running on free servers. If it does not respond, please try again in a minutes to avoid the restart duration!
         query = update.message
         message = f"Name: <b>{query.from_user.first_name}</b>, Username:@{query.from_user.username} with ID: <b>@{str(query.from_user.id)}</b> began using the bot!"
