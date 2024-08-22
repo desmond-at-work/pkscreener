@@ -276,6 +276,11 @@ argParser.add_argument(
     help="Piped Menus",
     required=False,
 )
+argParser.add_argument(
+    "--usertag",
+    help="User defined tag value(s)",
+    required=False,
+)
 
 def get_debug_args():
     global args
@@ -403,7 +408,7 @@ def warnAboutDependencies():
             input("Press any key to try anyway...")
     
 def runApplication():
-    from pkscreener.globals import main, sendQuickScanResult,sendMessageToTelegramChannel, sendGlobalMarketBarometer, updateMenuChoiceHierarchy, isInterrupted, refreshStockData, closeWorkersAndExit, resetUserMenuChoiceOptions,showBacktestResults
+    from pkscreener.globals import main, sendQuickScanResult,sendMessageToTelegramChannel, sendGlobalMarketBarometer, updateMenuChoiceHierarchy, isInterrupted, refreshStockData, closeWorkersAndExit, resetUserMenuChoiceOptions
     # From a previous call to main with args, it may have been mutated.
     # Let's stock to the original args passed by user
     try:
@@ -412,7 +417,7 @@ def runApplication():
     except:
         pass
     global results, resultStocks, plainResults, dbTimestamp, elapsed_time, start_time,argParser
-    from pkscreener.classes.MenuOptions import menus, PREDEFINED_PIPED_MENU_OPTIONS,PREDEFINED_SCAN_MENU_VALUES
+    from pkscreener.classes.MenuOptions import menus, PREDEFINED_SCAN_MENU_TEXTS, PREDEFINED_PIPED_MENU_OPTIONS,PREDEFINED_SCAN_MENU_VALUES
     args = get_debug_args()
     if not isinstance(args,argparse.Namespace):
         argsv = argParser.parse_known_args(args=args)
@@ -447,6 +452,7 @@ def runApplication():
                 indexNum = PREDEFINED_SCAN_MENU_VALUES.index(choices)
                 choices = f"{'P_1_'+str(indexNum +1) if '>|' in choices else choices}"
                 args.progressstatus = f"[+] {choices} => Running {choices}"
+                args.usertag = PREDEFINED_SCAN_MENU_TEXTS[indexNum]
         except:
             choices = ""
             pass
@@ -478,7 +484,7 @@ def runApplication():
                 runOptionName = f"{'[+] P_1_'+str(indexNum +1) if '>|' in runOption else runOption}"
             except Exception as e:
                 default_logger().debug(e,exc_info=True)
-                runOptionName = ""
+                runOptionName = f"[+] {runOption.replace('D:','').replace(':D','').replace(':','_').replace('_D','').replace('C_','X_')}"
                 pass
             args.progressstatus = f"{runOptionName} => Running Intraday Analysis: {analysis_index} of {len(runOptions)}..."
             analysisOptions = runOption.split("|")
@@ -503,8 +509,8 @@ def runApplication():
                     optionalFinalOutcome_df = results
                 if optionalFinalOutcome_df is not None and "EoDDiff" not in optionalFinalOutcome_df.columns:
                     # Somehow the file must have been corrupted. Let's re-download
-                    configManager.deleteFileWithPattern(pattern="stock_data_*.pkl")
-                    configManager.deleteFileWithPattern(pattern="intraday_stock_data_*.pkl")
+                    configManager.deleteFileWithPattern(pattern="*stock_data_*.pkl")
+                    configManager.deleteFileWithPattern(pattern="*intraday_stock_data_*.pkl")
                 if isInterrupted():
                     break
             except Exception as e:
@@ -513,56 +519,11 @@ def runApplication():
                     traceback.print_exc()
             resetUserMenuChoiceOptions()
             analysis_index += 1
+            # saveSendFinalOutcomeDataframe(optionalFinalOutcome_df)
 
         configManager.maxdisplayresults = maxdisplayresults
         configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
-        if optionalFinalOutcome_df is not None and not optionalFinalOutcome_df.empty:
-            final_df = None
-            try:
-                optionalFinalOutcome_df.drop('FairValue', axis=1, inplace=True, errors="ignore")
-                df_grouped = optionalFinalOutcome_df.groupby("Stock")
-                for stock, df_group in df_grouped:
-                    if stock == "BASKET":
-                        if final_df is None:
-                            final_df = df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
-                        else:
-                            final_df = pd.concat([final_df, df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
-            except:
-                pass
-            if final_df is not None and not final_df.empty:
-                with pd.option_context('mode.chained_assignment', None):
-                    final_df = final_df[["Pattern","LTP@Alert","LTP","EoDDiff","SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff"]]
-                    final_df.rename(
-                        columns={
-                            "Pattern": "Scan Name",
-                            "LTP@Alert": "Basket Value@Alert",
-                            "LTP": "Basket Value@EOD",
-                            "SqrOffLTP": "Basket Value@SqrOff",
-                            "DayHigh": "Basket Value@DayHigh",
-                            },
-                            inplace=True,
-                        )
-                    final_df.dropna(inplace=True)
-                mark_down = colorText.miniTabulator().tabulate(
-                                    final_df,
-                                    headers="keys",
-                                    tablefmt=colorText.No_Pad_GridFormat,
-                                    showindex = False
-                                ).encode("utf-8").decode(Utility.STD_ENCODING)
-                showBacktestResults(final_df,optionalName="Intraday_Backtest_Result_Summary",choices="Summary")
-                OutputControls().printOutput(mark_down)
-                from PKDevTools.classes.Telegram import get_secrets
-                Channel_Id, _, _, _ = get_secrets()
-                if Channel_Id is not None and len(str(Channel_Id)) > 0:
-                    sendQuickScanResult(menuChoiceHierarchy="IntradayAnalysis",
-                                        user=int(f"-{Channel_Id}"),
-                                        tabulated_results=mark_down,
-                                        markdown_results=mark_down,
-                                        caption="IntradayAnalysis - Morning alert vs Market Close",
-                                        pngName= f"PKS_IA_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
-                                        pngExtension= ".png",
-                                        forceSend=True
-                                        )
+        saveSendFinalOutcomeDataframe(optionalFinalOutcome_df)
     else:
         if args.barometer:
             sendGlobalMarketBarometer(userArgs=args)
@@ -672,6 +633,59 @@ def runApplication():
                 if results is not None and len(monitorOption_org) > 0:
                     chosenMenu = args.pipedtitle if args.pipedtitle is not None else updateMenuChoiceHierarchy()
                     MarketMonitor().refresh(screen_df=results,screenOptions=monitorOption_org, chosenMenu=chosenMenu[:120],dbTimestamp=f"{dbTimestamp} | CycleTime:{elapsed_time}s",telegram=args.telegram)
+
+def saveSendFinalOutcomeDataframe(optionalFinalOutcome_df):
+    import pandas as pd
+    from pkscreener.classes import Utility
+    from pkscreener.globals import sendQuickScanResult,showBacktestResults
+
+    if optionalFinalOutcome_df is not None and not optionalFinalOutcome_df.empty:
+        final_df = None
+        try:
+            optionalFinalOutcome_df.drop('FairValue', axis=1, inplace=True, errors="ignore")
+            df_grouped = optionalFinalOutcome_df.groupby("Stock")
+            for stock, df_group in df_grouped:
+                if stock == "BASKET":
+                    if final_df is None:
+                        final_df = df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
+                    else:
+                        final_df = pd.concat([final_df, df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
+        except:
+            pass
+        if final_df is not None and not final_df.empty:
+            with pd.option_context('mode.chained_assignment', None):
+                final_df = final_df[["Pattern","LTP@Alert","LTP","EoDDiff","SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff"]]
+                final_df.rename(
+                        columns={
+                            "Pattern": "Scan Name",
+                            "LTP@Alert": "Basket Value@Alert",
+                            "LTP": "Basket Value@EOD",
+                            "SqrOffLTP": "Basket Value@SqrOff",
+                            "DayHigh": "Basket Value@DayHigh",
+                            },
+                            inplace=True,
+                        )
+                final_df.dropna(inplace=True)
+            mark_down = colorText.miniTabulator().tabulate(
+                                    final_df,
+                                    headers="keys",
+                                    tablefmt=colorText.No_Pad_GridFormat,
+                                    showindex = False
+                                ).encode("utf-8").decode(Utility.STD_ENCODING)
+            showBacktestResults(final_df,optionalName="Intraday_Backtest_Result_Summary",choices="Summary")
+            OutputControls().printOutput(mark_down)
+            from PKDevTools.classes.Telegram import get_secrets
+            Channel_Id, _, _, _ = get_secrets()
+            if Channel_Id is not None and len(str(Channel_Id)) > 0:
+                sendQuickScanResult(menuChoiceHierarchy="IntradayAnalysis",
+                                        user=int(f"-{Channel_Id}"),
+                                        tabulated_results=mark_down,
+                                        markdown_results=mark_down,
+                                        caption="IntradayAnalysis - Morning alert vs Market Close",
+                                        pngName= f"PKS_IA_{PKDateUtilities.currentDateTime().strftime('%Y-%m-%d_%H:%M:%S')}",
+                                        pngExtension= ".png",
+                                        forceSend=True
+                                        )
 
 def checkIntradayComponent(args, monitorOption):
     lastComponent = monitorOption.split(":")[-1]
