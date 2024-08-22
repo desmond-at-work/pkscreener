@@ -87,7 +87,8 @@ from pkscreener.classes.MenuOptions import (
     MAX_SUPPORTED_MENU_OPTION,
     MAX_MENU_OPTION,
     PIPED_SCANNERS,
-    PREDEFINED_SCAN_MENU_KEYS
+    PREDEFINED_SCAN_MENU_KEYS,
+    PREDEFINED_SCAN_MENU_TEXTS
 )
 from pkscreener.classes.OtaUpdater import OTAUpdater
 from pkscreener.classes.Portfolio import PortfolioCollection
@@ -896,6 +897,8 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             OutputControls().printOutput(colorText.END, end="")
             if selPredefinedOption in PREDEFINED_SCAN_MENU_KEYS:
                 scannerOption = PIPED_SCANNERS[selPredefinedOption]
+                if userPassedArgs is not None:
+                    userPassedArgs.usertag = PREDEFINED_SCAN_MENU_TEXTS[int(selPredefinedOption)-1]
                 updateMenuChoiceHierarchy()
                 if userPassedArgs.pipedmenus is not None:
                     chosenOptions = scannerOption.split("-o ")[1]
@@ -1777,6 +1780,7 @@ def analysisFinalResults(screenResults,saveResults,optionalFinalOutcome_df,runOp
     if analysis_df is not None and 'index' in analysis_df.columns:
         analysis_df.drop('index', axis=1, inplace=True, errors="ignore")            
     if firstScanKey.startswith("C:"):
+        analysis_df["Stock"] = saveResults.index.values
         if analysis_df is not None and "LTP@Alert" in analysis_df.columns:
             if optionalFinalOutcome_df is None:
                 optionalFinalOutcome_df = analysis_df
