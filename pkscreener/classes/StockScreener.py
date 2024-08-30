@@ -385,7 +385,7 @@ class StockScreener:
                             return returnLegibleData(f"isConfluence:{isConfluence}")
                     elif respChartPattern == 4:
                         isVCP = screener.validateVCP(
-                            fullData, screeningDictionary, saveDictionary
+                            fullData, screeningDictionary, saveDictionary,stockName=stock
                         )
                         if not isVCP:
                             return returnLegibleData(f"isVCP:{isVCP}")
@@ -823,7 +823,7 @@ class StockScreener:
                 )
         if not isLtpValid:
             raise ScreeningStatistics.LTPNotInConfiguredRange
-        if configManager.stageTwo and not verifyStageTwo and executeOption > 0:
+        if configManager.stageTwo and not verifyStageTwo and (executeOption > 0 and executeOption not in [29]):
             raise ScreeningStatistics.NotAStageTwoStock
 
     def updateStock(self, stock, screeningDictionary, saveDictionary, executeOption=0,exchangeName='INDIA',userArgs=None):

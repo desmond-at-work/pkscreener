@@ -147,6 +147,7 @@ mp_manager = None
 analysis_dict = {}
 download_trials = 0
 media_group_dict = {}
+DEV_CHANNEL_ID="-1001785195297"
 
 def startMarketMonitor(mp_dict,keyboardevent):
     from PKDevTools.classes.NSEMarketStatus import NSEMarketStatus
@@ -434,10 +435,21 @@ def handleSecondaryMenuChoices(
                     configManager.setConfig(ConfigManager.parser, default=False, showFileCreatedText=True)
                 return
             elif periodOption.upper() in ["B"]:
+                lastTradingDate = PKDateUtilities.nthPastTradingDateStringFromFutureDate(n=(22 if configManager.period == '1y' else 15))
                 backtestDaysAgo = input(
-                    colorText.BOLD + colorText.FAIL + "[+] Enter no. of days/candles in the past as starting candle for which you'd like to run the scans (e.g. 10 for 10 candles ago or 0 for today):"
+                     f"{colorText.BOLD}{colorText.FAIL}[+] Enter no. of days/candles in the past as starting candle for which you'd like to run the scans\n[+] You can also enter a past date in {colorText.END}{colorText.GREEN}YYYY-MM-DD{colorText.END}{colorText.FAIL} format\n[+] (e.g. {colorText.GREEN}10{colorText.END} for 10 candles ago or {colorText.GREEN}0{colorText.END} for today or {colorText.GREEN}{lastTradingDate}{colorText.END}):"
                 ) or ('22' if configManager.period == '1y' else '15')
                 OutputControls().printOutput(colorText.END, end="")
+                if len(str(backtestDaysAgo)) >= 3 and "-" in str(backtestDaysAgo):
+                    # User entered a date
+                    try:
+                        backtestDaysAgo = abs(PKDateUtilities.trading_days_between(d1=PKDateUtilities.dateFromYmdString(str(backtestDaysAgo)),d2=PKDateUtilities.currentDateTime()))
+                    except Exception as e:
+                        default_logger().debug(e,exc_info=True)
+                        OutputControls().printOutput(f"An error occured! Going ahead with default inputs.")
+                        backtestDaysAgo = ('22' if configManager.period == '1y' else '15')
+                        sleep(3)
+                        pass
                 launcher = f'"{sys.argv[0]}"' if " " in sys.argv[0] else sys.argv[0]
                 requestingUser = f" -u {userPassedArgs.user}" if userPassedArgs.user is not None else ""
                 enableLog = f" -l" if userPassedArgs.log else ""
@@ -1171,15 +1183,34 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             respChartPattern, insideBarToLookback = Utility.tools.promptChartPatterns(
                 selectedMenu
             )
+            if respChartPattern in [4]:
+                userInput = str(
+                    input(
+                        f"[+] Enable additional VCP filters like range and consolidation? [Y/N, Current: {colorText.FAIL}{'y' if configManager.enableAdditionalVCPFilters else 'n'}{colorText.END}]: "
+                    ) or ('y' if configManager.enableAdditionalVCPFilters else 'n')
+                ).lower()
+                configManager.enableAdditionalVCPFilters = (
+                    False
+                    if "y" not in str(userInput).lower()
+                    else True
+                )
+                if configManager.enableAdditionalVCPFilters:
+                    configManager.vcpRangePercentageFromTop = input(
+                        f"[+] Range percentage from the highest high(top) for VCP.\n[+] Press <Enter> for using default value. (number)({colorText.GREEN}Optimal = 20 to 60{colorText.END}, Current: {colorText.FAIL}{configManager.vcpRangePercentageFromTop}{colorText.END}): "
+                    ) or configManager.vcpRangePercentageFromTop
+                    configManager.vcpLegsToCheckForConsolidation = input(
+                        f"[+] Number of consolidation legs to check for VCP. (number)({colorText.GREEN}Optimal = 2{colorText.END}, Current: {colorText.FAIL}{configManager.vcpLegsToCheckForConsolidation}{colorText.END}): "
+                    ) or configManager.vcpLegsToCheckForConsolidation
+                configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
             if maLength == 0 and respChartPattern in [1, 2, 3, 6, 9]:
                 maLength = Utility.tools.promptChartPatternSubMenu(selectedMenu, respChartPattern)
             if maLength == 4 and respChartPattern == 3: # Super-confluence setup
                 if len(options) <= 5:
                     configManager.superConfluenceMaxReviewDays = input(
-                        f"[+] Max number of review days for super-confluence-checks. (number)(Optimal = 3-7, Current: {colorText.FAIL}{configManager.superConfluenceMaxReviewDays}{colorText.END}): "
+                        f"[+] Max number of review days for super-confluence-checks. (number)({colorText.GREEN}Optimal = 3-7{colorText.END}, Current: {colorText.FAIL}{configManager.superConfluenceMaxReviewDays}{colorText.END}): "
                     ) or configManager.superConfluenceMaxReviewDays
                     configManager.superConfluenceEMAPeriods = input(
-                        f"[+] Comma separated EMA periods for super-confluence-crossovers in the same order. (numbers)(Optimal = 8,21,55, Current: {colorText.FAIL}{configManager.superConfluenceEMAPeriods}{colorText.END}): "
+                        f"[+] Comma separated EMA periods for super-confluence-crossovers in the same order. (numbers)({colorText.GREEN}Optimal = 8,21,55{colorText.END}, Current: {colorText.FAIL}{configManager.superConfluenceEMAPeriods}{colorText.END}): "
                     ) or configManager.superConfluenceEMAPeriods
                     enable200SMA = input(
                         f"[+] Enable enforcing SMA-200 check for super-confluence? When enabled, at least one of 8/21/55-EMA should be lower than SMA-200 [Y/N, Current: {colorText.FAIL}{'y' if configManager.superConfluenceEnforce200SMA else 'n'}{colorText.END}]: "
@@ -1352,11 +1383,11 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
     if executeOption == 30:
         if userPassedArgs.options is None:
             Utility.tools.clearScreen(forceTop=True)
-            atrSensitivity = input(colorText.WARN + f"Enter the ATR Trailing Stop Sensitivity (Multiplier) value (Optimal:1, Current={configManager.atrTrailingStopSensitivity}):") or configManager.atrTrailingStopSensitivity
+            atrSensitivity = input(colorText.WARN + f"Enter the ATR Trailing Stop Sensitivity (Multiplier) value ({colorText.GREEN}Optimal:1{colorText.END}, Current={configManager.atrTrailingStopSensitivity}):") or configManager.atrTrailingStopSensitivity
             configManager.atrTrailingStopSensitivity = atrSensitivity
-            atrPeriod = input(colorText.WARN + f"Enter the ATR Period value (Optimal:10, Current={configManager.atrTrailingStopPeriod}):") or configManager.atrTrailingStopPeriod
+            atrPeriod = input(colorText.WARN + f"Enter the ATR Period value ({colorText.GREEN}Optimal:10{colorText.END}, Current={configManager.atrTrailingStopPeriod}):") or configManager.atrTrailingStopPeriod
             configManager.atrTrailingStopPeriod = atrPeriod
-            atrEma = input(colorText.WARN + f"Enter the ATR EMA period (Optimal:200, Current={configManager.atrTrailingStopEMAPeriod}):") or configManager.atrTrailingStopEMAPeriod
+            atrEma = input(colorText.WARN + f"Enter the ATR EMA period ({colorText.GREEN}Optimal:200{colorText.END}, Current={configManager.atrTrailingStopEMAPeriod}):") or configManager.atrTrailingStopEMAPeriod
             configManager.atrTrailingStopEMAPeriod = atrEma
             configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
         # Ensure we have the template JSONs from vectorBt
@@ -1364,7 +1395,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
         screener.computeBuySellSignals(None)
     if executeOption == 34:
         if userPassedArgs.options is None:
-            configManager.anchoredAVWAPPercentage = input(colorText.WARN + f"Enter the anchored-VWAP percentage gap from close price (Optimal:1, Current={configManager.anchoredAVWAPPercentage}):") or configManager.anchoredAVWAPPercentage
+            configManager.anchoredAVWAPPercentage = input(colorText.WARN + f"Enter the anchored-VWAP percentage gap from close price ({colorText.GREEN}Optimal:1{colorText.END}, Current={configManager.anchoredAVWAPPercentage}):") or configManager.anchoredAVWAPPercentage
             configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
     if executeOption == 40:
         Utility.tools.clearScreen()
@@ -1379,6 +1410,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             smaEMA = input(colorText.BOLD + colorText.FAIL + "[+] Select option: ") or "2"
         if smaEMA == "0":
             return None, None
+        selectedChoice["3"] = str(smaEMA)
         respChartPattern = (smaEMA == "2")
         selectedMenu = m3.find(str(smaEMA))
         Utility.tools.clearScreen()
@@ -1390,6 +1422,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             smaDirection = input(colorText.BOLD + colorText.FAIL + "[+] Select option: ") or "2"
         if smaDirection == "0":
             return None, None
+        selectedChoice["4"] = str(smaDirection)
         reversalOption = (smaDirection == "2")
         Utility.tools.clearScreen()
         if len(options) >= 6:
@@ -1398,6 +1431,8 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
         else:
             smas = input(colorText.BOLD + colorText.FAIL + "[+] Price should cross which of these comma separated EMA/SMA(s): (e.g. 200 or 8,9,21,55,200) [Default: 200]:") or "200"
         insideBarToLookback = smas.split(",")
+        selectedChoice["5"] = str(smas)
+        
     if executeOption == 42:
         Utility.tools.getLastScreenedResults(defaultAnswer)
         return None, None
@@ -1759,7 +1794,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 OutputControls().printOutput(f"{colorText.GREEN} => Done in {round(time.time()-begin,2)}s{colorText.END}")
     except:
         pass
-    if "RUNNER" not in os.environ.keys() and not testing and (userPassedArgs is None or (userPassedArgs is not None and userPassedArgs.user is None and (userPassedArgs.answerdefault is None or userPassedArgs.systemlaunched))):
+    if "RUNNER" not in os.environ.keys() and not testing and (userPassedArgs is None or (userPassedArgs is not None and (userPassedArgs.user is None or str(userPassedArgs.user) == DEV_CHANNEL_ID) and (userPassedArgs.answerdefault is None or userPassedArgs.systemlaunched))):
         prevOutput_results = saveResults.index if (saveResults is not None and not saveResults.empty) else []
         isNotPiped = (("|" not in userPassedArgs.options) if (userPassedArgs is not None and userPassedArgs.options is not None) else True)
         hasFoundStocks = len(prevOutput_results) > 0 and isNotPiped
@@ -2323,7 +2358,7 @@ def printNotifySaveScreenedResults(
         ).encode("utf-8").decode(STD_ENCODING)
         copyScreenResults = screenResults.copy()
         hiddenColumns = configManager.alwaysHiddenDisplayColumns.split(",")
-        if userPassedArgs.runintradayanalysis:
+        if userPassedArgs.runintradayanalysis or ("VCP" in menuChoiceHierarchy):
             hiddenColumns.remove("Pattern")
         if executeOption in [33]:
             hiddenColumns.remove("52Wk-L")
@@ -2434,8 +2469,8 @@ def printNotifySaveScreenedResults(
                         maxcolwidths=[None,None,4,3]
                     ).encode("utf-8").decode(STD_ENCODING).replace("-K-----S-----C-----R","-K-----S----C---R").replace("%  ","% ").replace("=K=====S=====C=====R","=K=====S====C===R").replace("Vol  |","Vol|").replace("Hgh  |","Hgh|").replace("EoD  |","EoD|").replace("x  ","x")
                     caption_results = Utility.tools.removeAllColorStyles(caption_results.replace("-E-----N-----E-----R","-E-----N----E---R").replace("=E=====N=====E=====R","=E=====N====E===R"))
-                    suggestion_text = "Please try @nse_pkscreener_bot for many more scan options and results!\nLegal Disclaimer: https://pkjmesra.github.io/PKScreener/Disclaimer.txt\n"
-                    finalCaption = f"{caption}.Open attached image for more. Samples:<pre>{caption_results}</pre>{elapsed_text}\n{suggestion_text}\n{pipedTitle}" #<i>Author is <u><b>NOT</b> a SEBI registered financial advisor</u> and MUST NOT be deemed as one.</i>"
+                    suggestion_text = "Please try @nse_pkscreener_bot for many more scan options and results! <i><b><u>Legal Disclaimer</u></b>:https://pkjmesra.github.io/PKScreener/Disclaimer.txt</i>"
+                    finalCaption = f"{caption}.Open attached image for more. Samples:<pre>{caption_results}</pre>{elapsed_text} {suggestion_text}"
                 if not testing: # and not userPassedArgs.runintradayanalysis:
                     kite_file_path, kite_caption = sendKiteBasketOrderReviewDetails(saveResultsTrimmed,runOptionName,caption,user)
                     sendQuickScanResult(
@@ -3008,9 +3043,9 @@ def saveDownloadedData(downloadOnly, testing, stockDictPrimary, configManager, l
                     log_file_path = os.path.join(Archiver.get_user_outputs_dir(), "pkscreener-logs.txt")
                     message=f"{cache_file} has size: {cacheFileSize}! Something is wrong!"
                     if os.path.exists(log_file_path):
-                        sendMessageToTelegramChannel(caption=message,document_filePath=log_file_path, user="-1001785195297")
+                        sendMessageToTelegramChannel(caption=message,document_filePath=log_file_path, user=DEV_CHANNEL_ID)
                     else:
-                        sendMessageToTelegramChannel(message=message,user="-1001785195297")
+                        sendMessageToTelegramChannel(message=message,user=DEV_CHANNEL_ID)
                 except:
                     pass
                 # Let's try again with logging
@@ -3147,7 +3182,7 @@ def sendMessageToTelegramChannel(
                 media_group_dict["ATTACHMENTS"] = []
             for attachment in attachments:
                 file_paths.append(attachment["FILEPATH"])
-                file_captions.append(attachment["CAPTION"].replace('&','n'))
+                file_captions.append(attachment["CAPTION"].replace('&','n')[:1024])
             if len(file_paths) > 0 and not userPassedArgs.monitor:
                 resp = send_media_group(user=userPassedArgs.user,
                                                 png_paths=[],
@@ -3156,7 +3191,7 @@ def sendMessageToTelegramChannel(
                                                 file_captions=file_captions)
                 default_logger().debug(resp.text, exc_info=True)
             caption = f"{str(len(file_captions))} files sent!"
-            message = media_group_dict["CAPTION"].replace('&','n').replace("<","*") if "CAPTION" in media_group_dict.keys() else "-"
+            message = media_group_dict["CAPTION"].replace('&','n').replace("<","*")[:1024] if "CAPTION" in media_group_dict.keys() else "-"
         for f in file_paths:
             try:
                 if "RUNNER" in os.environ.keys():
@@ -3166,12 +3201,11 @@ def sendMessageToTelegramChannel(
             except:
                 pass
     if user is not None:
-        channel_userID="-1001785195297"
-        if user != channel_userID and userPassedArgs is not None and not userPassedArgs.monitor:
+        if user != DEV_CHANNEL_ID and userPassedArgs is not None and not userPassedArgs.monitor:
             # Send an update to dev channel
             send_message(
                 f"Responded back to userId:{user} with {caption}.{message} [{userPassedArgs.options.replace(':D','')}]",
-                userID="-1001785195297",
+                userID=DEV_CHANNEL_ID,
             )
 
 def sendTestStatus(screenResults, label, user=None):
