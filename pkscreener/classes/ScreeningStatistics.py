@@ -1326,15 +1326,18 @@ class ScreeningStatistics:
         crossOver = 0
         
         # Loop until we've found the nth crossover for MACD or we've reached the last point in time
-        while (crossOver < nthCrossover and index >=0):
-            if diff_df["diff"][index-1] < 0: # Signal line has not crossed yet and is below the zero line
-                while((diff_df["diff"][index-1] < 0 and index >=0)): # and diff_df.index <= brokerSqrOfftime): # or diff_df["rsi"][index-1] <= minRSI):
-                    # Loop while Signal line has not crossed yet and is below the zero line and we've not reached the last point
-                    index -= 1
-            else:
-                while((diff_df["diff"][index-1] >= 0 and index >=0)): # and diff_df.index <= brokerSqrOfftime): # or diff_df["rsi"][index-1] <= minRSI):
-                    # Loop until signal line has not crossed yet and is above the zero line
-                    index -= 1
+        while (crossOver < nthCrossover and index > 0):
+            try:
+                if diff_df["diff"][index-1] < 0: # Signal line has not crossed yet and is below the zero line
+                    while((diff_df["diff"][index-1] < 0 and index >=0)): # and diff_df.index <= brokerSqrOfftime): # or diff_df["rsi"][index-1] <= minRSI):
+                        # Loop while Signal line has not crossed yet and is below the zero line and we've not reached the last point
+                        index -= 1
+                else:
+                    while((diff_df["diff"][index-1] >= 0 and index >=0)): # and diff_df.index <= brokerSqrOfftime): # or diff_df["rsi"][index-1] <= minRSI):
+                        # Loop until signal line has not crossed yet and is above the zero line
+                        index -= 1
+            except:
+                continue
             crossOver += 1
         ts = diff_df.tail(len(diff_df)-index +1).head(1).index[-1]
         return ts, data[data.index == ts] #df.head(len(df) -index +1).tail(1)
@@ -2605,7 +2608,7 @@ class ScreeningStatistics:
                     saveDict["MA-Signal"] = saved[1] + f"SuperGoldenConf(-{dayDate})"
                     screenDict[f"Latest EMA-{self.configManager.superConfluenceEMAPeriods}, SMA-200 (EMA55 %)"] = f"{colorText.GREEN if (ema_8>=ema_21 and ema_8>=ema_55) else (colorText.WARN if (ema_8>=ema_21 or ema_8>=ema_55) else colorText.FAIL)}{round(ema_8,1)}{colorText.END},{colorText.GREEN if ema_21>=ema_55 else colorText.FAIL}{round(ema_21,1)}{colorText.END},{round(ema_55,1)}, {colorText.GREEN if sma_200<= ema_55 and emasCrossedSMA200 else (colorText.WARN if sma_200<= ema_55 else colorText.FAIL)}{round(sma_200,1)} ({round(ema55_percentage*100,1)}%){colorText.END}"
                     saveDict[f"Latest EMA-{self.configManager.superConfluenceEMAPeriods}, SMA-200 (EMA55 %)"] = f"{round(ema_8,1)},{round(ema_21,1)},{round(ema_55,1)}, {round(sma_200,1)} ({round(ema55_percentage*100,1)}%)"
-                    saveDict[f"SuperConfSort"] = int(f"{indexDate.year}{indexDate.month}{indexDate.day}") #0 if ema_8>=ema_21 and ema_8>=ema_55 and ema_21>=ema_55 and sma_200<=ema_55 else (1 if (ema_8>=ema_21 or ema_8>=ema_55) else (2 if sma_200<=ema_55 else 3))
+                    saveDict[f"SuperConfSort"] = int(f"{indexDate.year:04}{indexDate.month:02}{indexDate.day:02}") #0 if ema_8>=ema_21 and ema_8>=ema_55 and ema_21>=ema_55 and sma_200<=ema_55 else (1 if (ema_8>=ema_21 or ema_8>=ema_55) else (2 if sma_200<=ema_55 else 3))
                     screenDict[f"SuperConfSort"] = saveDict[f"SuperConfSort"]
                     return superbConfluence
                 elif ema8CrossedEMA21 and ema8CrossedEMA55 and ema21CrossedEMA55:
@@ -2620,7 +2623,7 @@ class ScreeningStatistics:
                     saveDict["MA-Signal"] = saved[1] + f"SilverCrossConf.({dayDate})"
                     screenDict[f"Latest EMA-{self.configManager.superConfluenceEMAPeriods}, SMA-200 (EMA55 %)"] = f"{colorText.GREEN if (ema_8>=ema_21 and ema_8>=ema_55) else (colorText.WARN if (ema_8>=ema_21 or ema_8>=ema_55) else colorText.FAIL)}{round(ema_8,1)}{colorText.END},{colorText.GREEN if ema_21>=ema_55 else colorText.FAIL}{round(ema_21,1)}{colorText.END},{round(ema_55,1)}, {colorText.GREEN if sma_200<= ema_55 and emasCrossedSMA200 else (colorText.WARN if sma_200<= ema_55 else colorText.FAIL)}{round(sma_200,1)} ({round(ema55_percentage*100,1)}%){colorText.END}"
                     saveDict[f"Latest EMA-{self.configManager.superConfluenceEMAPeriods}, SMA-200 (EMA55 %)"] = f"{round(ema_8,1)},{round(ema_21,1)},{round(ema_55,1)}, {round(sma_200,1)} ({round(ema55_percentage*100,1)}%)"
-                    saveDict[f"SuperConfSort"] = int(f"{indexDate.year}{indexDate.month}{indexDate.day}") #0 if ema_8>=ema_21 and ema_8>=ema_55 and ema_21>=ema_55 and sma_200<=ema_55 else (1 if (ema_8>=ema_21 or ema_8>=ema_55) else (2 if sma_200<=ema_55 else 3))
+                    saveDict[f"SuperConfSort"] = int(f"{indexDate.year:04}{indexDate.month:02}{indexDate.day:02}") #0 if ema_8>=ema_21 and ema_8>=ema_55 and ema_21>=ema_55 and sma_200<=ema_55 else (1 if (ema_8>=ema_21 or ema_8>=ema_55) else (2 if sma_200<=ema_55 else 3))
                     screenDict[f"SuperConfSort"] = saveDict[f"SuperConfSort"]
                     silverCross = True
                 
@@ -2698,13 +2701,28 @@ class ScreeningStatistics:
                 (confFilter == 2 and isDeadCrossOver)
         return False
 
+    def findPotentialProfitableEntriesBullishTodayForPDOPDC(self, df, saveDict, screenDict):
+        if df is None or len(df) == 0:
+            return False
+        data = df.copy()
+        reversedData = data[::-1]  # Reverse the dataframe
+        recentClose = reversedData["Close"].tail(1).head(1).iloc[0]
+        yesterdayClose = reversedData["Close"].tail(2).head(1).iloc[0]
+        recentOpen = reversedData["Open"].tail(1).head(1).iloc[0]
+        yesterdayOpen = reversedData["Open"].tail(2).head(1).iloc[0]
+        recentVol = reversedData["Volume"].tail(1).head(1).iloc[0]
+        # Daily open > 1 day ago open &
+        # Daily Close > 1 day ago close &
+        # Volume > 1000000
+        return recentOpen > yesterdayOpen and recentClose > yesterdayClose and recentVol >= 1000000
+    
     # - 200 MA is rising for at least 3 months.
     # - 50 MA is above 200MA
     # - Current price is above 20Osma and preferably above 50 to 100
     # - Current price is at least above 100 % from 52week low
     # - The stock should have made a 52 week high at least once every 4 to 6 month
-    def findPotentialProfitableEntries(self, df, full_df, saveDict, screenDict):
-        if df is None or len(df) == 0:
+    def findPotentialProfitableEntriesFrequentHighsBullishMAs(self, df, full_df, saveDict, screenDict):
+        if df is None or len(df) == 0 or full_df is None or len(full_df) == 0:
             return False
         data = full_df.copy()
         one_week = 5
@@ -2829,15 +2847,20 @@ class ScreeningStatistics:
         # Check for consolidation/tightening.
         # Every next leg should be tighter than the previous one
         consolidationPercentages = list(reversed(consolidationPercentages))
+        devScore = 0
         if self.configManager.enableAdditionalVCPFilters:
             if len(consolidationPercentages) >= 2:
                 index = 0
                 while (index+1) < legsToCheck:
+                    # prev one < new one.
                     if consolidationPercentages[index] < consolidationPercentages[index+1]:
                         return False, consolidationPercentages[:relativeLegsTocheck]
+                    if index < relativeLegsTocheck:
+                        devScore += 2-(consolidationPercentages[index]/consolidationPercentages[index+1])
                     index += 1
+        
         # Return the first requested number of legs in the order of leg1, leg2, leg3 etc.
-        return True, consolidationPercentages[:relativeLegsTocheck]
+        return True, consolidationPercentages[:relativeLegsTocheck], devScore
 
     # validate if the stock has been having higher highs, higher lows
     # and higher close with latest close > supertrend and 8-EMA.
@@ -3603,7 +3626,7 @@ class ScreeningStatistics:
                     and ltp > lowPoints[0]
                 ):
                     saved = self.findCurrentSavedValue(screenDict, saveDict, "Pattern")
-                    isTightening, consolidations = self.validateConsolidationContraction(df=df.copy(),legsToCheck=(int(self.configManager.vcpLegsToCheckForConsolidation) if self.configManager.enableAdditionalVCPFilters else 0),stockName=stockName)
+                    isTightening, consolidations, deviationScore = self.validateConsolidationContraction(df=df.copy(),legsToCheck=(int(self.configManager.vcpLegsToCheckForConsolidation) if self.configManager.enableAdditionalVCPFilters else 0),stockName=stockName)
                     consolidations = [f"{str(x)}%" for x in consolidations]
                     if isTightening:
                         screenDict["Pattern"] = (
@@ -3614,6 +3637,8 @@ class ScreeningStatistics:
                             + colorText.END
                         )
                         saveDict["Pattern"] = saved[1] + f"VCP (BO: {highestTop}, Cons.:{','.join(consolidations)})"
+                        screenDict["deviationScore"] = deviationScore
+                        saveDict["deviationScore"] = deviationScore
                         return True
                     return False
         except Exception as e:  # pragma: no cover

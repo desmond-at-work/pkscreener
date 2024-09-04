@@ -229,6 +229,12 @@ argParser.add_argument(
     required=False,
 )
 argParser.add_argument(
+    "--stocklist",
+    type=str,
+    help="Comma separated list of stocks passed from previous scan results",
+    required=False,
+)
+argParser.add_argument(
     "--systemlaunched",
     action="store_true",
     help="Indicator to show that this is a system launched screener, using os.system",
@@ -332,7 +338,7 @@ def exitGracefully():
         argsv = argParser.parse_known_args()
         args = argsv[0]
         if args is not None and args.options is not None and not args.options.upper().startswith("T"):
-            resetConfigToDefault()
+            resetConfigToDefault(force=True)
             
         if "PKDevTools_Default_Log_Level" in os.environ.keys():
             if args is None or (args is not None and args.options is not None and "|" not in args.options):
@@ -697,7 +703,7 @@ def checkIntradayComponent(args, monitorOption):
         configManager.toggleConfig(candleDuration=args.intraday, clearCache=False)
         # args.options = f"{monitorOption}:{args.options[len(lastComponent):]}"
     else:
-                    # We need to switch to daily scan
+        # We need to switch to daily scan
         args.intraday = None
         configManager.toggleConfig(candleDuration='1d', clearCache=False)
     return monitorOption
@@ -862,8 +868,8 @@ def pkscreenercli():
         
         if args.intraday:
             configManager.toggleConfig(candleDuration=args.intraday, clearCache=False)
-        else:
-            configManager.toggleConfig(candleDuration='1d', clearCache=False)
+        # else:
+        #     configManager.toggleConfig(candleDuration='1d', clearCache=False)
         if args.options is not None:
             if str(args.options) == "0":
                 # Must be from unit tests to be able to break out of loops via eventing
@@ -892,8 +898,8 @@ def pkscreenercli():
                 + colorText.END
             )
             configManager.restartRequestsCache()
-            if args.intraday is None:
-                configManager.toggleConfig(candleDuration="1d", clearCache=False)
+            # if args.intraday is None:
+            #     configManager.toggleConfig(candleDuration="1d", clearCache=False)
             runApplication()
             from pkscreener.globals import closeWorkersAndExit
             closeWorkersAndExit()
