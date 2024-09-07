@@ -34,6 +34,8 @@ from PKDevTools.classes.log import default_logger
 from PKDevTools.classes.Singleton import SingletonType, SingletonMixin
 from PKDevTools.classes.OutputControls import OutputControls
 from PKDevTools.classes.MarketHours import MarketHours
+import re
+
 parser = configparser.ConfigParser(strict=False)
 
 # Default attributes for Downloading Cache from Git repo
@@ -87,6 +89,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
         self.vcpRangePercentageFromTop = 20
         self.vcpLegsToCheckForConsolidation = 3
         self.enableAdditionalVCPFilters = True
+        self.enableAdditionalVCPEMAFilters = False
         self.enableUsageAnalytics = False
         # This determines how many days apart the backtest calculations are run.
         # For example, for weekly backtest calculations, set this to 5 (5 days = 1 week)
@@ -109,6 +112,42 @@ class tools(SingletonMixin, metaclass=SingletonType):
             self.periods.extend(self.maxBacktestWindow)
         MarketHours().setMarketOpenHourMinute(self.marketOpen)
         MarketHours().setMarketCloseHourMinute(self.marketClose)
+
+    @property
+    def candleDurationInt(self):
+        temp = re.compile("([0-9]+)([a-zA-Z]+)")
+        try:
+            res = temp.match(self.duration).groups()
+        except:
+            return self.duration
+        return int(res[0])
+    
+    @property
+    def candleDurationFrequency(self):
+        temp = re.compile("([0-9]+)([a-zA-Z]+)")
+        try:
+            res = temp.match(self.duration).groups()
+        except:
+            return self.duration
+        return res[1]
+
+    @property
+    def candlePeriodInt(self):
+        temp = re.compile("([0-9]+)([a-zA-Z]+)")
+        try:
+            res = temp.match(self.period).groups()
+        except:
+            return self.period
+        return int(res[0])
+    
+    @property
+    def candlePeriodFrequency(self):
+        temp = re.compile("([0-9]+)([a-zA-Z]+)")
+        try:
+            res = temp.match(self.period).groups()
+        except:
+            return self.period
+        return res[1]
 
     @property
     def periodsRange(self):
@@ -182,6 +221,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
             parser.set("config", "defaultIndex", str(self.defaultIndex))
             parser.set("config", "defaultMonitorOptions", str(self.defaultMonitorOptions))
             parser.set("config", "duration", self.duration)
+            parser.set("config", "enableAdditionalVCPEMAFilters", "y" if (self.enableAdditionalVCPEMAFilters) else "n")
             parser.set("config", "enableAdditionalVCPFilters", "y" if (self.enableAdditionalVCPFilters) else "n")
             parser.set("config", "enablePortfolioCalculations", "y" if self.enablePortfolioCalculations else "n")
             parser.set("config", "enableUsageAnalytics", "y" if self.enableUsageAnalytics else "n")
@@ -231,8 +271,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 fp.close()
                 if showFileCreatedText:
                     OutputControls().printOutput(
-                        colorText.BOLD
-                        + colorText.GREEN
+                        colorText.GREEN
                         + "[+] Default configuration generated as user configuration is not found!"
                         + colorText.END
                     )
@@ -241,8 +280,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
             except IOError as e:  # pragma: no cover
                 self.default_logger.debug(e, exc_info=True)
                 OutputControls().printOutput(
-                    colorText.BOLD
-                    + colorText.FAIL
+                    colorText.FAIL
                     + "[+] Failed to save user config. Exiting.."
                     + colorText.END
                 )
@@ -254,8 +292,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
             parser.add_section("filters")
             OutputControls().printOutput("")
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.GREEN
+                colorText.GREEN
                 + "[+] PKScreener User Configuration:"
                 + colorText.END
             )
@@ -399,6 +436,12 @@ class tools(SingletonMixin, metaclass=SingletonType):
                         f"[+] Enable additional VCP filters like range and consolidation? [Y/N, Current: {colorText.FAIL}{'y' if self.enableAdditionalVCPFilters else 'n'}{colorText.END}]: "
                     ) or ('y' if self.enableAdditionalVCPFilters else 'n')
                 ).lower()
+                self.enableAdditionalVCPEMAFilters = str(
+                    input(
+                        f"[+] Enable additional 20/50-EMA filters? [Y/N, Current: {colorText.FAIL}{'y' if self.enableAdditionalVCPEMAFilters else 'n'}{colorText.END}]: "
+                    ) or ('y' if self.enableAdditionalVCPEMAFilters else 'n')
+                ).lower()
+                
                 self.enableUsageAnalytics = str(
                     input(
                         f"[+] Enable usage analytics to be captured? [Y/N, Current: {colorText.FAIL}{'y' if self.enableUsageAnalytics else 'n'}{colorText.END}]: "
@@ -439,6 +482,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
                     endDuration = str(self.duration)[-1].lower()
                     endDuration = "d" if endDuration not in ["m","h","d","k","o"] else ""
                 parser.set("config", "duration", str(self.duration + endDuration))
+                parser.set("config", "enableAdditionalVCPEMAFilters", str(self.enableAdditionalVCPEMAFilters))
                 parser.set("config", "enableAdditionalVCPFilters", str(self.enableAdditionalVCPFilters))
                 parser.set("config", "enablePortfolioCalculations", str(self.enablePortfolioCalculations))
                 parser.set("config", "enableUsageAnalytics", str(self.enableUsageAnalytics))
@@ -497,8 +541,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
             # delete stock data due to config change
             self.deleteFileWithPattern()
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.FAIL
+                colorText.FAIL
                 + "[+] Cached Stock Data Deleted."
                 + colorText.END
             )
@@ -509,8 +552,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 fp.close()
                 self.getConfig(parser=parser)
                 OutputControls().printOutput(
-                    colorText.BOLD
-                    + colorText.GREEN
+                    colorText.GREEN
                     + "[+] User configuration saved."
                     + colorText.END
                 )
@@ -519,8 +561,7 @@ class tools(SingletonMixin, metaclass=SingletonType):
             except IOError as e:  # pragma: no cover
                 self.default_logger.debug(e, exc_info=True)
                 OutputControls().printOutput(
-                    colorText.BOLD
-                    + colorText.FAIL
+                    colorText.FAIL
                     + "[+] Failed to save user config. Exiting.."
                     + colorText.END
                 )
@@ -598,6 +639,11 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 self.atrTrailingStopSensitivity = float(parser.get("config", "atrtrailingstopsensitivity"))
                 self.generalTimeout = float(parser.get("config", "generalTimeout"))
                 self.defaultIndex = int(parser.get("config", "defaultIndex"))
+                self.enableAdditionalVCPEMAFilters = (
+                    False
+                    if "y" not in str(parser.get("config", "enableAdditionalVCPEMAFilters")).lower()
+                    else True
+                )
                 self.enableAdditionalVCPFilters = (
                     False
                     if "y" not in str(parser.get("config", "enableAdditionalVCPFilters")).lower()
@@ -644,14 +690,14 @@ class tools(SingletonMixin, metaclass=SingletonType):
                 MarketHours().setMarketCloseHourMinute(self.marketClose)
             except configparser.NoOptionError as e:# pragma: no cover
                 self.default_logger.debug(e, exc_info=True)
-                # input(colorText.BOLD + colorText.FAIL +
+                # input(colorText.FAIL +
                 #       '[+] pkscreener requires user configuration again. Press enter to continue..' + colorText.END)
                 parser.remove_section("config")
                 parser.remove_section("filters")
                 self.setConfig(parser, default=True, showFileCreatedText=False)
             except Exception as e:  # pragma: no cover
                 self.default_logger.debug(e, exc_info=True)
-                # input(colorText.BOLD + colorText.FAIL +
+                # input(colorText.FAIL +
                 #       '[+] pkscreener requires user configuration again. Press enter to continue..' + colorText.END)
                 parser.remove_section("config")
                 parser.remove_section("filters")
@@ -698,14 +744,14 @@ class tools(SingletonMixin, metaclass=SingletonType):
             pass
 
     def isIntradayConfig(self):
-        return self.period == "1d"
+        return self.duration.endswith("m") or self.duration.endswith("h")
 
     # Print config file
     def showConfigFile(self, defaultAnswer=None):
         try:
             prompt = "[+] PKScreener User Configuration:"
             f = open("pkscreener.ini", "r")
-            OutputControls().printOutput(colorText.BOLD + colorText.GREEN + prompt + colorText.END)
+            OutputControls().printOutput(colorText.GREEN + prompt + colorText.END)
             configData = f.read()
             f.close()
             OutputControls().printOutput("\n" + configData)
@@ -715,14 +761,12 @@ class tools(SingletonMixin, metaclass=SingletonType):
         except Exception as e:  # pragma: no cover
             self.default_logger.debug(e, exc_info=True)
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.FAIL
+                colorText.FAIL
                 + "[+] User Configuration not found!"
                 + colorText.END
             )
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.WARN
+                colorText.WARN
                 + "[+] Configure the limits to continue."
                 + colorText.END
             )
