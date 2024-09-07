@@ -846,14 +846,15 @@ class StockScreener:
             'High':'max',
             'Low':'min',
             'Close':'last',
+            'Adj Close': 'last',
             'Volume':'sum'
         }
-        # final_df = df.resample('W-FRI', closed='left').agg(ohlc_dict).shift('1d')
-        # weeklyData = data.resample('W').agg(ohlc_dict)
-        candleDuration = self.configManager.duration[:-1]
-        durationFrequency = "T" if self.configManager.duration.endswith("m") else ("H" if self.configManager.duration.endswith("h") else ("M" if self.configManager.duration.endswith("mo") else ("W" if self.configManager.duration.endswith("wk") else "T")))
-        if int(candleDuration) >= 1 and (self.configManager.duration.endswith("m") or self.configManager.duration.endswith("h") or self.configManager.duration.endswith("mo") or self.configManager.duration.endswith("wk")):
+        candleDuration = self.configManager.candleDurationInt
+        candleDurationFrequency = self.configManager.candleDurationFrequency
+        durationFrequency = "T" if candleDurationFrequency=="m" else ("H" if candleDurationFrequency=="h" else ("M" if candleDurationFrequency=="mo" else ("W" if candleDurationFrequency=="wk" else "T")))
+        if int(candleDuration) >= 1 and (candleDurationFrequency in ["m","h","mo","wk"]):
             data = data.resample(f'{candleDuration}{durationFrequency}', offset='15min').agg(ohlc_dict)
+            data = data[data["High"]>0] # resampling can introduce 0 value rows for non-market hours
         if backtestDuration == 0:
             fullData, processedData = screener.preprocessData(
                     data, daysToLookback=configManager.effectiveDaysToLookback
@@ -896,7 +897,7 @@ class StockScreener:
         hostDataLength = 0 if hostData is None else (0 if "data" not in hostData.keys() else len(hostData["data"]))
         start = None
         lastTradingDate = PKDateUtilities.tradingDate().strftime("%Y-%m-%d")
-        if (period == '1d' or configManager.duration[-1] == "m"):
+        if (configManager.candlePeriodFrequency in ["d","mo"] and configManager.candleDurationFrequency in ["m","h"]):
             if backtestDuration > 0: # We are backtesting
                 start = PKDateUtilities.nthPastTradingDateStringFromFutureDate(backtestDuration)
                 end = PKDateUtilities.nthPastTradingDateStringFromFutureDate(backtestDuration-1)
@@ -967,7 +968,18 @@ class StockScreener:
                 else:
                     hostRef.default_logger.debug(e, exc_info=True)
                 pass
-
+        if "Datetime" in data.columns: # for intraday data, the column name is Datetime
+            with pd.option_context('mode.chained_assignment', None):
+                data["Date"] = data["Datetime"]
+        try:
+            data.reset_index(inplace=True)
+            if "Datetime" in data.columns and "Date" not in data.columns:
+                data.rename(columns={"Datetime": "Date"}, inplace=True)
+            else:
+                data.rename(columns={"index": "Date"}, inplace=True)
+            data.set_index("Date", inplace=True)
+        except:
+            pass
         if ((shouldCache and not self.isTradingTime and (hostData is None  or hostDataLength == 0)) or downloadOnly) \
             or (shouldCache and hostData is None):  # and backtestDuration == 0 # save only if we're NOT backtesting
                 if start is None or start is lastTradingDate and data is not None:
@@ -1000,8 +1012,7 @@ class StockScreener:
         if printCounter:
             try:
                 OutputControls().printOutput(
-                            colorText.BOLD
-                            + colorText.GREEN
+                            colorText.GREEN
                             + (
                                 "[%d%%] Screened %d, Found %d. Fetching data & Analyzing %s..."
                                 % (
@@ -1018,8 +1029,7 @@ class StockScreener:
                             end="",
                         )
                 OutputControls().printOutput(
-                            colorText.BOLD
-                            + colorText.GREEN
+                            colorText.GREEN
                             + "=> Done!"
                             + colorText.END,
                             end="\r",

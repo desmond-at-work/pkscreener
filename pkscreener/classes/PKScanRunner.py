@@ -306,8 +306,9 @@ class PKScanRunner:
         sec_cache_file = cache_file if "intraday_" in cache_file else f"intraday_{cache_file}"
         # Get RS rating stock value of the index
         from pkscreener.classes.Fetcher import screenerStockDataFetcher
-        nsei_df = screenerStockDataFetcher().fetchStockData(PKScanRunner.configManager.baseIndex,'1y','1d',None,0,0,0,exchangeSuffix="")
+        nsei_df = screenerStockDataFetcher().fetchStockData(PKScanRunner.configManager.baseIndex,PKScanRunner.configManager.period,PKScanRunner.configManager.duration,None,0,0,0,exchangeSuffix="")
         rs_score_index = -1
+        PKScanRunner.configManager.getConfig(parser)
         if nsei_df is not None:
             rs_score_index = scr.calc_relative_strength(nsei_df[::-1])
         consumers = [
@@ -362,9 +363,8 @@ class PKScanRunner:
             else:
                 cleanup_on_sigterm()
         OutputControls().printOutput(
-            colorText.BOLD
-            + colorText.FAIL
-            + f"[+] Using Period:{PKScanRunner.configManager.period} and Duration:{PKScanRunner.configManager.duration} for scan! You can change this in user config."
+            colorText.FAIL
+            + f"[+] Using Period:{colorText.END}{colorText.GREEN}{PKScanRunner.configManager.period}{colorText.END}{colorText.FAIL} and Duration:{colorText.END}{colorText.GREEN}{PKScanRunner.configManager.duration}{colorText.END}{colorText.FAIL} for scan! You can change this in user config."
             + colorText.END
         )
         start_time = time.time()

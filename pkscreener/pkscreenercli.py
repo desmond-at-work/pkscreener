@@ -158,6 +158,11 @@ argParser.add_argument(
     required=False,
 )
 argParser.add_argument(
+    "--fname",
+    help="file name with results contents",
+    required=False,
+)
+argParser.add_argument(
     "--forceBacktestsForZeroResultDays",
     help="Force run the backtests even for those days when we already have zero results saved in the repo",
     action=argparse.BooleanOptionalAction,
@@ -226,6 +231,12 @@ argParser.add_argument(
     "--singlethread",
     action="store_true",
     help="Run analysis for debugging purposes in a single process, single threaded environment",
+    required=False,
+)
+argParser.add_argument(
+    "--slicewindow",
+    type=str,
+    help="Time slice window value - a date or datetime string with timezone in international format",
     required=False,
 )
 argParser.add_argument(
@@ -301,12 +312,13 @@ def get_debug_args():
         return args
     except Exception as e:
         return None
-        # return " -a Y -e -l -o X:12:30:D:D:D:D:D".split(" ")
+    # return ' --systemlaunched -a y -e -o "X:12:9:2.5:>|X:0:31:>|X:0:23:>|X:0:27:" -u -1001785195297 --stocklist GLS,NESCO,SBICARD,DREAMFOLKS,JAGRAN,ACEINTEG,RAMASTEEL'.split(" ")
 
 args = get_debug_args()
 argsv = argParser.parse_known_args(args=args)
 # argsv = argParser.parse_known_args()
 args = argsv[0]
+# args.slicewindow = "2024-09-06 10:55:12.481253+05:30"
 results = None
 resultStocks = None
 plainResults = None
@@ -390,24 +402,21 @@ def setupLogger(shouldLog=False, trace=False):
 def warnAboutDependencies():
     if not Imports["talib"]:
         OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.FAIL
+                colorText.FAIL
                 + "[+] TA-Lib is not installed. Looking for pandas_ta."
                 + colorText.END
             )
         sleep(1)
         if Imports["pandas_ta"]:
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.GREEN
+                colorText.GREEN
                 + "[+] Found and falling back on pandas_ta.\n[+] For full coverage(candle patterns), you may wish to read the README file in PKScreener repo : https://github.com/pkjmesra/PKScreener \n[+] or follow instructions from\n[+] https://github.com/ta-lib/ta-lib-python"
                 + colorText.END
             )
             sleep(1)
         else:
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.FAIL
+                colorText.FAIL
                 + "[+] Neither ta-lib nor pandas_ta was located. You need at least one of them to continue! \n[+] Please follow instructions from README file under PKScreener repo: https://github.com/pkjmesra/PKScreener"
                 + colorText.END
             )
@@ -425,6 +434,7 @@ def runApplication():
     global results, resultStocks, plainResults, dbTimestamp, elapsed_time, start_time,argParser
     from pkscreener.classes.MenuOptions import menus, PREDEFINED_SCAN_MENU_TEXTS, PREDEFINED_PIPED_MENU_OPTIONS,PREDEFINED_SCAN_MENU_VALUES
     args = get_debug_args()
+    
     if not isinstance(args,argparse.Namespace):
         argsv = argParser.parse_known_args(args=args)
         # argsv = argParser.parse_known_args()
@@ -432,6 +442,7 @@ def runApplication():
     if args is not None and not args.exit:
         argsv = argParser.parse_known_args()
         args = argsv[0]
+    # args.slicewindow = "2024-09-06 10:55:12.481253+05:30"
     if args.user is None:
         from PKDevTools.classes.Telegram import get_secrets
         Channel_Id, _, _, _ = get_secrets()
@@ -459,6 +470,7 @@ def runApplication():
                 choices = f"{'P_1_'+str(indexNum +1) if '>|' in choices else choices}"
                 args.progressstatus = f"[+] {choices} => Running {choices}"
                 args.usertag = PREDEFINED_SCAN_MENU_TEXTS[indexNum]
+                args.maxdisplayresults = 2000
         except:
             choices = ""
             pass
@@ -884,16 +896,14 @@ def pkscreenercli():
             configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
         if args.testbuild and not args.prodbuild:
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.FAIL
+                colorText.FAIL
                 + "[+] Started in TestBuild mode!"
                 + colorText.END
             )
             runApplication()
         elif args.download:
             OutputControls().printOutput(
-                colorText.BOLD
-                + colorText.FAIL
+                colorText.FAIL
                 + "[+] Download ONLY mode! Stocks will not be screened!"
                 + colorText.END
             )
@@ -963,8 +973,7 @@ def scheduleNextRun():
     sleepUntilNextExecution = not PKDateUtilities.isTradingTime()
     while sleepUntilNextExecution:
         OutputControls().printOutput(
-            colorText.BOLD
-            + colorText.FAIL
+            colorText.FAIL
             + (
                 "SecondsAfterClosingTime[%d] SecondsBeforeMarketOpen [%d]. Next run at [%s]"
                 % (
@@ -992,7 +1001,7 @@ def scheduleNextRun():
     global cron_runs
     if cron_runs > 0:
         OutputControls().printOutput(
-            colorText.BOLD + colorText.GREEN + f'=> Going to fetch again in {int(args.croninterval)} sec. at {(PKDateUtilities.currentDateTime() + datetime.timedelta(seconds=120)).strftime("%Y-%m-%d %H:%M:%S")} IST...' + colorText.END,
+            colorText.GREEN + f'=> Going to fetch again in {int(args.croninterval)} sec. at {(PKDateUtilities.currentDateTime() + datetime.timedelta(seconds=120)).strftime("%Y-%m-%d %H:%M:%S")} IST...' + colorText.END,
             end="\r",
             flush=True,
         )
