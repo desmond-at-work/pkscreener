@@ -423,13 +423,16 @@ class tools:
         ]
         colorsDict = {
             colorText.BLUE: "blue",
-            colorText.GREEN: "darkgreen"
+            colorText.BRIGHTGREEN: "darkgreen",
+            colorText.GREEN: "green"
             if defaultCellFillColor == "black"
             else "lightgreen",
             colorText.WARN: "darkorange"
             if defaultCellFillColor == "black"
             else "yellow",
+            colorText.BRIGHTYELLOW: "darkyellow",
             colorText.FAIL: "red",
+            colorText.BRIGHTRED : "darkred",
             colorText.WHITE: "white" 
             if defaultCellFillColor == "white"
             else "black",
@@ -1194,8 +1197,8 @@ class tools:
                 response = str(
                     input(
                         colorText.WARN
-                        + "[>] Do you want to save the results in excel file? [Y/N](Default:Y): "
-                    ) or "Y"
+                        + f"[>] Do you want to save the results in excel file? [Y/N](Default:{colorText.END}{colorText.FAIL}N{colorText.END}): "
+                    ) or "N"
                 ).upper()
             else:
                 response = defaultAnswer
