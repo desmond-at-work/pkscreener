@@ -27,7 +27,7 @@ import logging
 import sys
 import time
 import warnings
-
+import datetime
 import numpy as np
 
 warnings.simplefilter("ignore", DeprecationWarning)
@@ -190,16 +190,20 @@ class StockScreener:
                     data = data.tail(len(intraday_data))
                     intraday_data = intraday_data.tail(len(data))
                     # Indexes won't match. Hence, we'd need to fallback on tolist
-                    processedData.insert(len(processedData.columns), "RSIi", intraday_processedData["RSI"].tolist())
-                    fullData.insert(len(fullData.columns), "RSIi", intraday_processedData["RSI"].tolist())
+                    if "RSIi" not in processedData.columns:
+                        processedData.insert(len(processedData.columns), "RSIi", intraday_processedData["RSI"].tolist())
+                    if "RSIi" not in fullData.columns:
+                        fullData.insert(len(fullData.columns), "RSIi", intraday_processedData["RSI"].tolist())
                 else:
                     with SuppressOutput(suppress_stderr=(logLevel==logging.NOTSET), suppress_stdout=(not (printCounter or testbuild))):
-                        processedData.insert(len(processedData.columns), "RSIi", np.array(np.nan))
-                        fullData.insert(len(fullData.columns), "RSIi", np.array(np.nan))
+                        if "RSIi" not in processedData.columns:
+                            processedData.insert(len(processedData.columns), "RSIi", np.array(np.nan))
+                            fullData.insert(len(fullData.columns), "RSIi", np.array(np.nan))
             else:
                     with SuppressOutput(suppress_stderr=(logLevel==logging.NOTSET), suppress_stdout=(not (printCounter or testbuild))):
-                        processedData.insert(len(processedData.columns), "RSIi", np.array(np.nan))
-                        fullData.insert(len(fullData.columns), "RSIi", np.array(np.nan))
+                        if "RSIi" not in processedData.columns:
+                            processedData.insert(len(processedData.columns), "RSIi", np.array(np.nan))
+                            fullData.insert(len(fullData.columns), "RSIi", np.array(np.nan))
 
             def returnLegibleData(exceptionMessage=None):
                 if backtestDuration == 0 or menuOption not in ["B"]:
@@ -594,7 +598,7 @@ class StockScreener:
                         or (executeOption == 29 and bidGreaterThanAsk)
                         or (executeOption == 40 and priceCrossed)
                     ):
-                        isNotMonitoringDashboard = userArgs.monitor is None or (userArgs.monitor is not None and "~" not in userArgs.monitor)
+                        isNotMonitoringDashboard = userArgs is None or userArgs.monitor is None or (userArgs.monitor is not None and "~" not in userArgs.monitor)
                         # Now screen for common ones to improve performance
                         if isNotMonitoringDashboard and not (executeOption == 6 and reversalOption == 7):
                             if sys.version_info >= (3, 11):
@@ -915,6 +919,10 @@ class StockScreener:
             ):
             if testData is not None:
                 data = testData
+                data.reset_index(inplace=True)
+                data["Date"] = pd.to_datetime(data['index'].astype(int)/1000,unit='s')
+                data.set_index("Date", inplace=True)
+                data.drop("index",axis=1,inplace=True)
             else:
                 data = fetcher.fetchStockData(
                         stock,
