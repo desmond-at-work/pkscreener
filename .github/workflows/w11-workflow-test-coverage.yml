@@ -154,7 +154,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch-name || github.head_ref || github.ref}}
+          ref: ${{ inputs.branch-name || github.head_ref || github.ref }}
 
       - name: Declare env variables
         id: vars

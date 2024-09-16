@@ -114,7 +114,7 @@ def marketStatus():
 art = colorText.GREEN + f"{getArtText()}\nv{VERSION}" + colorText.END + f" | {marketStatus()}"
 
 lastScreened = os.path.join(
-    Archiver.get_user_outputs_dir(), "last_screened_results.pkl"
+    Archiver.get_user_data_dir(), "last_screened_results.pkl"
 )
 
 # Class for managing misc and utility methods
@@ -809,7 +809,7 @@ class tools:
         pattern = f"{'intraday_' if intraday else ''}stock_data_"
         cache_file = pattern + str(cache_date) + ".pkl"
         exists = False
-        for f in glob.glob(f"{pattern}*.pkl", root_dir=Archiver.get_user_outputs_dir()):
+        for f in glob.glob(f"{pattern}*.pkl", root_dir=Archiver.get_user_data_dir()):
             if f.endswith(cache_file):
                 exists = True
                 break
@@ -820,9 +820,9 @@ class tools:
         exists, fileName = tools.afterMarketStockDataExists(
             configManager.isIntradayConfig() or intraday
         )
-        outputFolder = Archiver.get_user_outputs_dir()
+        outputFolder = Archiver.get_user_data_dir()
         if downloadOnly:
-            outputFolder = outputFolder.replace("results","actions-data-download")
+            outputFolder = outputFolder.replace(f"results{os.sep}Data","actions-data-download")
             if not os.path.isdir(outputFolder):
                 os.makedirs(os.path.dirname(f"{outputFolder}{os.sep}"), exist_ok=True)
             configManager.deleteFileWithPattern(rootDir=outputFolder)
@@ -836,7 +836,7 @@ class tools:
                     OutputControls().printOutput(colorText.GREEN + f"=> {cache_file}" + colorText.END)
                     Committer.execOSCommand(f"git add {cache_file} -f >/dev/null 2>&1")
                     if "RUNNER" not in os.environ.keys():
-                        copyFilePath = os.path.join(Archiver.get_user_outputs_dir(), f"copy_{fileName}")
+                        copyFilePath = os.path.join(Archiver.get_user_data_dir(), f"copy_{fileName}")
                         cacheFileSize = os.stat(cache_file).st_size if os.path.exists(cache_file) else 0
                         if os.path.exists(cache_file) and cacheFileSize >= 1024*1024*40:
                             shutil.copy(cache_file,copyFilePath) # copy is the saved source of truth
@@ -857,7 +857,7 @@ class tools:
                 OutputControls().printOutput(colorText.GREEN + f"=> {cache_file}" + colorText.END)
         return cache_file
 
-    @Halo(text='', spinner='dots')
+    @Halo(text='[+] Downloading fresh data from Data Providers...', spinner='dots')
     def downloadLatestData(stockDict,configManager,stockCodes=[],exchangeSuffix=".NS",downloadOnly=False):
         numStocksPerIteration = (int(len(stockCodes)/int(len(stockCodes)/10)) if len(stockCodes) >= 10 else len(stockCodes)) + 1
         queueCounter = 0
@@ -896,7 +896,6 @@ class tools:
         default_logger().debug(f"Attempted fresh download of {len(stockCodes)} stocks and downloaded {len(processedStocks)} stocks. {len(leftOutStocks)} stocks remaining.")
         return stockDict, leftOutStocks
 
-    @Halo(text='', spinner='dots')
     def loadStockData(
         stockDict,
         configManager,
@@ -939,8 +938,8 @@ class tools:
             f"Stock data cache file:{cache_file} exists ->{str(exists)}"
         )
         stockDataLoaded = False
-        copyFilePath = os.path.join(Archiver.get_user_outputs_dir(), f"copy_{cache_file}")
-        srcFilePath = os.path.join(Archiver.get_user_outputs_dir(), cache_file)
+        copyFilePath = os.path.join(Archiver.get_user_data_dir(), f"copy_{cache_file}")
+        srcFilePath = os.path.join(Archiver.get_user_data_dir(), cache_file)
         if os.path.exists(copyFilePath):
             shutil.copy(copyFilePath,srcFilePath) # copy is the saved source of truth
         if os.path.exists(srcFilePath) and not forceRedownload:
@@ -967,16 +966,17 @@ class tools:
             tools.saveStockData(stockDict,configManager,initialLoadCount,isIntraday,downloadOnly, forceSave=stockDataLoaded)
         return stockDict
 
+    @Halo(text='[+] Loading data from local cache...', spinner='dots')
     def loadDataFromLocalPickle(stockDict, configManager, downloadOnly, defaultAnswer, exchangeSuffix, cache_file, isTrading):
         stockDataLoaded = False
-        srcFilePath = os.path.join(Archiver.get_user_outputs_dir(), cache_file)
+        srcFilePath = os.path.join(Archiver.get_user_data_dir(), cache_file)
         with open(srcFilePath, "rb") as f:
             try:
                 stockData = pickle.load(f)
                 if not downloadOnly:
                     OutputControls().printOutput(
                             colorText.GREEN
-                            + f"[+] Automatically Using Cached Stock Data {'due to After-Market hours' if not PKDateUtilities.isTradingTime() else ''}!"
+                            + f"\n[+] Automatically Using Cached Stock Data {'due to After-Market hours' if not PKDateUtilities.isTradingTime() else ''}!"
                             + colorText.END
                         )
                 if stockData is not None and len(stockData) > 0:
@@ -1043,16 +1043,16 @@ class tools:
                     configManager.deleteFileWithPattern()
         return stockDict, stockDataLoaded
 
-    def downloadSavedDataFromServer(stockDict, configManager, downloadOnly, defaultAnswer, retrial, forceLoad, stockCodes, exchangeSuffix, isIntraday, forceRedownload, cache_file, isTrading):
-        stockDataLoaded = False
+    @Halo(text='', spinner='dots')
+    def tryFetchFromServer(cache_file):
         OutputControls().printOutput(
                     colorText.FAIL
-                    + "[+] Market Stock Data is not cached, or forced to redownload .."
+                    + "[+] Loading data from server. Market Stock Data is not cached, or forced to redownload .."
                     + colorText.END
                 )
         OutputControls().printOutput(
                 colorText.GREEN
-                + f"[+] Downloading {'Intraday' if configManager.isIntradayConfig() else 'Daily'} cache from server for faster processing, Please Wait.."
+                + f"[+] Downloading {colorText.END}{colorText.FAIL}{'Intraday' if configManager.isIntradayConfig() else 'Daily'}{colorText.END}{colorText.GREEN} cache from server for faster processing, Please Wait.."
                 + colorText.END
             )
         cache_url = (
@@ -1075,6 +1075,11 @@ class tools:
                     #'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
             }
         resp = fetcher.fetchURL(cache_url, headers=headers, stream=True)
+        return resp
+
+    def downloadSavedDataFromServer(stockDict, configManager, downloadOnly, defaultAnswer, retrial, forceLoad, stockCodes, exchangeSuffix, isIntraday, forceRedownload, cache_file, isTrading):
+        stockDataLoaded = False
+        resp = tools.tryFetchFromServer(cache_file)
         if resp is not None:
             default_logger().debug(
                     f"Stock data cache file:{cache_file} request status ->{resp.status_code}"
@@ -1090,7 +1095,7 @@ class tools:
                 bar, spinner = tools.getProgressbarStyle()
                 try:
                     f = open(
-                            os.path.join(Archiver.get_user_outputs_dir(), cache_file),
+                            os.path.join(Archiver.get_user_data_dir(), cache_file),
                             "w+b",
                         )  # .split(os.sep)[-1]
                     dl = 0
@@ -1105,7 +1110,7 @@ class tools:
                                 progressbar(1.0)
                     f.close()
                     with open(
-                            os.path.join(Archiver.get_user_outputs_dir(), cache_file),
+                            os.path.join(Archiver.get_user_data_dir(), cache_file),
                             "rb",
                         ) as f:
                         stockData = pickle.load(f)
@@ -1147,8 +1152,8 @@ class tools:
                                     # and so, was not found in stockDict
                                 continue
                         stockDataLoaded = True
-                        copyFilePath = os.path.join(Archiver.get_user_outputs_dir(), f"copy_{cache_file}")
-                        srcFilePath = os.path.join(Archiver.get_user_outputs_dir(), cache_file)
+                        copyFilePath = os.path.join(Archiver.get_user_data_dir(), f"copy_{cache_file}")
+                        srcFilePath = os.path.join(Archiver.get_user_data_dir(), cache_file)
                         if os.path.exists(copyFilePath) and os.path.exists(srcFilePath):
                             shutil.copy(copyFilePath,srcFilePath) # copy is the saved source of truth
                         if not os.path.exists(copyFilePath) and os.path.exists(srcFilePath): # Let's make a copy of the original one
@@ -1208,7 +1213,7 @@ class tools:
         if response is not None and response.upper() != "N":
             pastDateString = f"{pastDate}_to_" if pastDate is not None else ""
             filename = (
-                f"PKS_{sheetName}_"
+                f"PKS_{sheetName.strip()}_"
                 + pastDateString
                 + PKDateUtilities.currentDateTime().strftime("%d-%m-%y_%H.%M.%S")
                 + ".xlsx"
@@ -1218,7 +1223,7 @@ class tools:
             desktop = os.path.normpath(os.path.expanduser("~/Desktop"))
             filePath = ""
             try:
-                filePath = os.path.join(Archiver.get_user_outputs_dir(), filename)
+                filePath = os.path.join(Archiver.get_user_reports_dir(), filename)
                 # Create a Pandas Excel writer using XlsxWriter as the engine.
                 writer = pd.ExcelWriter(filePath, engine='xlsxwriter') # openpyxl throws an error exporting % sign.
                 # Convert the dataframe to an XlsxWriter Excel object.
@@ -1517,11 +1522,14 @@ class tools:
     @Halo(text='', spinner='dots')
     def getNiftyModel(retrial=False):
         if "Windows" in platform.system() and not 'pytest' in sys.modules:
-            sys.stdin.reconfigure(encoding='utf-8')
-            sys.stdout.reconfigure(encoding='utf-8')
+            try:
+                sys.stdin.reconfigure(encoding='utf-8')
+                sys.stdout.reconfigure(encoding='utf-8')
+            except:
+                pass
         files = [
-            os.path.join(Archiver.get_user_outputs_dir(), "nifty_model_v2.h5"),
-            os.path.join(Archiver.get_user_outputs_dir(), "nifty_model_v2.pkl"),
+            os.path.join(Archiver.get_user_data_dir(), "nifty_model_v2.h5"),
+            os.path.join(Archiver.get_user_data_dir(), "nifty_model_v2.pkl"),
         ]
         model = None
         pkl = None
@@ -1557,7 +1565,7 @@ class tools:
                         bar, spinner = tools.getProgressbarStyle()
                         f = open(
                             os.path.join(
-                                Archiver.get_user_outputs_dir(), file_url.split("/")[-1]
+                                Archiver.get_user_data_dir(), file_url.split("/")[-1]
                             ),
                             "wb"
                         )
