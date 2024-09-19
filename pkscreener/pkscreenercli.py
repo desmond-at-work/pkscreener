@@ -307,6 +307,9 @@ def get_debug_args():
             args = list(args)
         return args
     except NameError as e:
+        # args = sys.argv[1:]
+        # if isinstance(args,list) and len(args) > 0:
+        #     return args[0].split(" ")
         return None
     except TypeError as e: # NameSpace object is not iterable
         return args
@@ -387,9 +390,9 @@ def setupLogger(shouldLog=False, trace=False):
             os.remove(log_file_path)
         except Exception:# pragma: no cover
             pass
-    OutputControls().printOutput(colorText.FAIL + "\n[+] Logs will be written to:"+colorText.END)
-    OutputControls().printOutput(colorText.GREEN + f"[+] {log_file_path}"+colorText.END)
-    OutputControls().printOutput(colorText.FAIL + "[+] If you need to share, open this folder, copy and zip the log file to share.\n" + colorText.END)
+    OutputControls().printOutput(colorText.FAIL + "\n  [+] Logs will be written to:"+colorText.END)
+    OutputControls().printOutput(colorText.GREEN + f"  [+] {log_file_path}"+colorText.END)
+    OutputControls().printOutput(colorText.FAIL + "  [+] If you need to share, open this folder, copy and zip the log file to share.\n" + colorText.END)
     # logger = multiprocessing.log_to_stderr(log.logging.DEBUG)
     log.setup_custom_logger(
         "pkscreener",
@@ -404,21 +407,21 @@ def warnAboutDependencies():
     if not Imports["talib"]:
         OutputControls().printOutput(
                 colorText.FAIL
-                + "[+] TA-Lib is not installed. Looking for pandas_ta."
+                + "  [+] TA-Lib is not installed. Looking for pandas_ta."
                 + colorText.END
             )
         sleep(1)
         if Imports["pandas_ta"]:
             OutputControls().printOutput(
                 colorText.GREEN
-                + "[+] Found and falling back on pandas_ta.\n[+] For full coverage(candle patterns), you may wish to read the README file in PKScreener repo : https://github.com/pkjmesra/PKScreener \n[+] or follow instructions from\n[+] https://github.com/ta-lib/ta-lib-python"
+                + "  [+] Found and falling back on pandas_ta.\n  [+] For full coverage(candle patterns), you may wish to read the README file in PKScreener repo : https://github.com/pkjmesra/PKScreener \n  [+] or follow instructions from\n  [+] https://github.com/ta-lib/ta-lib-python"
                 + colorText.END
             )
             sleep(1)
         else:
             OutputControls().printOutput(
                 colorText.FAIL
-                + "[+] Neither ta-lib nor pandas_ta was located. You need at least one of them to continue! \n[+] Please follow instructions from README file under PKScreener repo: https://github.com/pkjmesra/PKScreener"
+                + "  [+] Neither ta-lib nor pandas_ta was located. You need at least one of them to continue! \n  [+] Please follow instructions from README file under PKScreener repo: https://github.com/pkjmesra/PKScreener"
                 + colorText.END
             )
             input("Press any key to try anyway...")
@@ -469,7 +472,7 @@ def runApplication():
                 choices = f"--systemlaunched -a y -e -o '{args.options.replace('C:','X:').replace('D:','')}'"
                 indexNum = PREDEFINED_SCAN_MENU_VALUES.index(choices)
                 choices = f"{'P_1_'+str(indexNum +1) if '>|' in choices else choices}"
-                args.progressstatus = f"[+] {choices} => Running {choices}"
+                args.progressstatus = f"  [+] {choices} => Running {choices}"
                 args.usertag = PREDEFINED_SCAN_MENU_TEXTS[indexNum]
                 args.maxdisplayresults = 2000
         except:
@@ -477,72 +480,7 @@ def runApplication():
             pass
         
     if args.runintradayanalysis:
-        maxdisplayresults = configManager.maxdisplayresults
-        configManager.maxdisplayresults = 2000
-        configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
-        runOptions = []
-        otherMenus = []
-        if len(args.options.split(":")) >= 4:
-            runOptions = [args.options]
-        else:
-            runOptions = PREDEFINED_PIPED_MENU_OPTIONS
-            # otherMenus =  menus.allMenus(topLevel="C", index=12)
-            if len(otherMenus) > 0:
-                runOptions.extend(otherMenus)
-        import pandas as pd
-        optionalFinalOutcome_df = pd.DataFrame()
-        import pkscreener.classes.Utility as Utility
-        import pandas as pd
-        # Delete any existing data from the previous run.
-        configManager.deleteFileWithPattern(pattern="stock_data_*.pkl")
-        analysis_index = 1
-        for runOption in runOptions:
-            try:
-                runOptionName = f"--systemlaunched -a y -e -o '{runOption.replace('C:','X:').replace('D:','')}'"
-                indexNum = PREDEFINED_SCAN_MENU_VALUES.index(runOptionName)
-                runOptionName = f"{'[+] P_1_'+str(indexNum +1) if '>|' in runOption else runOption}"
-            except Exception as e:
-                default_logger().debug(e,exc_info=True)
-                runOptionName = f"[+] {runOption.replace('D:','').replace(':D','').replace(':','_').replace('_D','').replace('C_','X_')}"
-                pass
-            args.progressstatus = f"{runOptionName} => Running Intraday Analysis: {analysis_index} of {len(runOptions)}..."
-            analysisOptions = runOption.split("|")
-            analysisOptions[-1] = analysisOptions[-1].replace("X:","C:")
-            runOption = "|".join(analysisOptions)
-            args.options = runOption
-            try:
-                results,plainResults = main(userArgs=args,optionalFinalOutcome_df=optionalFinalOutcome_df)
-                if args.pipedmenus is not None:
-                    while args.pipedmenus is not None:
-                        results, plainResults = main(userArgs=args)
-                if isInterrupted():
-                    closeWorkersAndExit()
-                    exitGracefully()
-                    sys.exit(0)
-                runPipedScans = True
-                while runPipedScans:
-                    runPipedScans = pipeResults(plainResults,args)
-                    if runPipedScans:
-                        results, plainResults = main(userArgs=args,optionalFinalOutcome_df=optionalFinalOutcome_df)
-                if results is not None and len(results) >= len(optionalFinalOutcome_df):
-                    optionalFinalOutcome_df = results
-                if optionalFinalOutcome_df is not None and "EoDDiff" not in optionalFinalOutcome_df.columns:
-                    # Somehow the file must have been corrupted. Let's re-download
-                    configManager.deleteFileWithPattern(pattern="*stock_data_*.pkl")
-                    configManager.deleteFileWithPattern(pattern="*intraday_stock_data_*.pkl")
-                if isInterrupted():
-                    break
-            except Exception as e:
-                OutputControls().printOutput(e)
-                if args.log:
-                    traceback.print_exc()
-            resetUserMenuChoiceOptions()
-            analysis_index += 1
-            # saveSendFinalOutcomeDataframe(optionalFinalOutcome_df)
-
-        configManager.maxdisplayresults = maxdisplayresults
-        configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
-        saveSendFinalOutcomeDataframe(optionalFinalOutcome_df)
+        generateIntradayAnalysisReports(args)
     else:
         if args.barometer:
             sendGlobalMarketBarometer(userArgs=args)
@@ -620,7 +558,7 @@ def runApplication():
                         if args is not None and args.pipedtitle is not None and "|" in args.pipedtitle:
                             OutputControls().printOutput(
                                     colorText.WARN
-                                    + f"[+] Pipe Results Found: {args.pipedtitle}. {'Reduce number of piped scans if no stocks could be found.' if '[0]' in args.pipedtitle else ''}"
+                                    + f"  [+] Pipe Results Found: {args.pipedtitle}. {'Reduce number of piped scans if no stocks could be found.' if '[0]' in args.pipedtitle else ''}"
                                     + colorText.END
                                 )
                             if args.answerdefault is None:
@@ -653,6 +591,78 @@ def runApplication():
                     chosenMenu = args.pipedtitle if args.pipedtitle is not None else updateMenuChoiceHierarchy()
                     MarketMonitor().refresh(screen_df=results,screenOptions=monitorOption_org, chosenMenu=chosenMenu[:120],dbTimestamp=f"{dbTimestamp} | CycleTime:{elapsed_time}s",telegram=args.telegram)
 
+def generateIntradayAnalysisReports(args):
+    from pkscreener.globals import main, sendQuickScanResult,sendMessageToTelegramChannel, sendGlobalMarketBarometer, updateMenuChoiceHierarchy, isInterrupted, refreshStockData, closeWorkersAndExit, resetUserMenuChoiceOptions
+    from pkscreener.classes.MenuOptions import menus, PREDEFINED_SCAN_MENU_TEXTS, PREDEFINED_PIPED_MENU_OPTIONS,PREDEFINED_SCAN_MENU_VALUES
+    from PKDevTools.classes import Archiver
+    maxdisplayresults = configManager.maxdisplayresults
+    configManager.maxdisplayresults = 2000
+    configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
+    runOptions = []
+    otherMenus = []
+    if len(args.options.split(":")) >= 4:
+        runOptions = [args.options]
+    else:
+        runOptions = PREDEFINED_PIPED_MENU_OPTIONS
+            # otherMenus =  menus.allMenus(topLevel="C", index=12)
+        if len(otherMenus) > 0:
+            runOptions.extend(otherMenus)
+    import pandas as pd
+    optionalFinalOutcome_df = pd.DataFrame()
+    import pkscreener.classes.Utility as Utility
+    # Delete any existing data from the previous run.
+    configManager.deleteFileWithPattern(rootDir=Archiver.get_user_data_dir(),pattern="stock_data_*.pkl")
+    analysis_index = 1
+    for runOption in runOptions:
+        try:
+            runOptionName = f"--systemlaunched -a y -e -o '{runOption.replace('C:','X:').replace('D:','')}'"
+            indexNum = PREDEFINED_SCAN_MENU_VALUES.index(runOptionName)
+            runOptionName = f"{'  [+] P_1_'+str(indexNum +1) if '>|' in runOption else runOption}"
+        except Exception as e:
+            default_logger().debug(e,exc_info=True)
+            runOptionName = f"  [+] {runOption.replace('D:','').replace(':D','').replace(':','_').replace('_D','').replace('C_','X_')}"
+            pass
+        args.progressstatus = f"{runOptionName} => Running Intraday Analysis: {analysis_index} of {len(runOptions)}..."
+        analysisOptions = runOption.split("|")
+        analysisOptions[-1] = analysisOptions[-1].replace("X:","C:")
+        runOption = "|".join(analysisOptions)
+        args.options = runOption
+        try:
+            results,plainResults = main(userArgs=args,optionalFinalOutcome_df=optionalFinalOutcome_df)
+            if args.pipedmenus is not None:
+                while args.pipedmenus is not None:
+                    results, plainResults = main(userArgs=args)
+            if isInterrupted():
+                closeWorkersAndExit()
+                exitGracefully()
+                sys.exit(0)
+            runPipedScans = True
+            while runPipedScans:
+                runPipedScans = pipeResults(plainResults,args)
+                if runPipedScans:
+                    results, plainResults = main(userArgs=args,optionalFinalOutcome_df=optionalFinalOutcome_df)
+            if results is not None and len(results) >= len(optionalFinalOutcome_df) and not results.empty and len(results.columns) > 5:
+                import numpy as np
+                if "%Chng" in results.columns and "EoDDiff" in results.columns:
+                    optionalFinalOutcome_df = results
+            if optionalFinalOutcome_df is not None and "EoDDiff" not in optionalFinalOutcome_df.columns:
+                # Somehow the file must have been corrupted. Let's re-download
+                configManager.deleteFileWithPattern(rootDir=Archiver.get_user_data_dir(), pattern="*stock_data_*.pkl")
+                configManager.deleteFileWithPattern(rootDir=Archiver.get_user_data_dir(), pattern="*intraday_stock_data_*.pkl")
+            if isInterrupted():
+                break
+        except Exception as e:
+            OutputControls().printOutput(e)
+            if args.log:
+                traceback.print_exc()
+        resetUserMenuChoiceOptions()
+        analysis_index += 1
+            # saveSendFinalOutcomeDataframe(optionalFinalOutcome_df)
+
+    configManager.maxdisplayresults = maxdisplayresults
+    configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
+    saveSendFinalOutcomeDataframe(optionalFinalOutcome_df)
+
 def saveSendFinalOutcomeDataframe(optionalFinalOutcome_df):
     import pandas as pd
     from pkscreener.classes import Utility
@@ -666,14 +676,14 @@ def saveSendFinalOutcomeDataframe(optionalFinalOutcome_df):
             for stock, df_group in df_grouped:
                 if stock == "BASKET":
                     if final_df is None:
-                        final_df = df_group[["Pattern","MA-Signal","Trend(22Prds)","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
+                        final_df = df_group[["Pattern","MA-Signal","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
                     else:
-                        final_df = pd.concat([final_df, df_group[["Pattern","MA-Signal","Trend(22Prds)","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
+                        final_df = pd.concat([final_df, df_group[["Pattern","MA-Signal","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
         except:
             pass
         if final_df is not None and not final_df.empty:
             with pd.option_context('mode.chained_assignment', None):
-                final_df = final_df[["Pattern","MA-Signal","Trend(22Prds)","LTP@Alert","LTP","EoDDiff","SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff"]]
+                final_df = final_df[["Pattern","MA-Signal","LTP@Alert","LTP","EoDDiff","SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff"]]
                 final_df.rename(
                         columns={
                             "Pattern": "Scan Name",
@@ -684,7 +694,7 @@ def saveSendFinalOutcomeDataframe(optionalFinalOutcome_df):
                             },
                             inplace=True,
                         )
-                final_df.dropna(inplace=True)
+                # final_df.dropna(inplace=True)
             mark_down = colorText.miniTabulator().tabulate(
                                     final_df,
                                     headers="keys",
@@ -775,7 +785,7 @@ def pkscreenercli():
         except RuntimeError as e:# pragma: no cover
             if "RUNNER" not in os.environ.keys() and ('PKDevTools_Default_Log_Level' in os.environ.keys() and os.environ["PKDevTools_Default_Log_Level"] != str(log.logging.NOTSET)):
                 OutputControls().printOutput(
-                    "[+] RuntimeError with 'multiprocessing'.\n[+] Please contact the Developer, if this does not work!"
+                    "  [+] RuntimeError with 'multiprocessing'.\n  [+] Please contact the Developer, if this does not work!"
                 )
                 OutputControls().printOutput(e)
                 traceback.print_exc()
@@ -898,7 +908,7 @@ def pkscreenercli():
         if args.testbuild and not args.prodbuild:
             OutputControls().printOutput(
                 colorText.FAIL
-                + "[+] Started in TestBuild mode!"
+                + "  [+] Started in TestBuild mode!"
                 + colorText.END
             )
             runApplication()
@@ -909,7 +919,7 @@ def pkscreenercli():
         elif args.download:
             OutputControls().printOutput(
                 colorText.FAIL
-                + "[+] Download ONLY mode! Stocks will not be screened!"
+                + "  [+] Download ONLY mode! Stocks will not be screened!"
                 + colorText.END
             )
             configManager.restartRequestsCache()
@@ -925,7 +935,7 @@ def pkscreenercli():
     except Exception as e:
         if "RUNNER" not in os.environ.keys() and ('PKDevTools_Default_Log_Level' in os.environ.keys() and os.environ["PKDevTools_Default_Log_Level"] != str(log.logging.NOTSET)):
                 OutputControls().printOutput(
-                    "[+] RuntimeError with 'multiprocessing'.\n[+] Please contact the Developer, if this does not work!"
+                    "  [+] RuntimeError with 'multiprocessing'.\n  [+] Please contact the Developer, if this does not work!"
                 )
                 OutputControls().printOutput(e)
                 traceback.print_exc()
@@ -962,7 +972,7 @@ def runApplicationForScreening():
         if args.prodbuild:
             disableSysOut(disable=False)
         OutputControls().printOutput(
-            f"{e}\n[+] An error occurred! Please run with '-l' option to collect the logs.\n[+] For example, 'pkscreener -l' and then contact the developer!"
+            f"{e}\n  [+] An error occurred! Please run with '-l' option to collect the logs.\n  [+] For example, 'pkscreener -l' and then contact the developer!"
         )
         if "RUNNER" in os.environ.keys() or ('PKDevTools_Default_Log_Level' in os.environ.keys() and os.environ["PKDevTools_Default_Log_Level"] != str(log.logging.NOTSET)):
             traceback.print_exc()

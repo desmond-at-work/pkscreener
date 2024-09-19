@@ -28,6 +28,9 @@ import platform
 import warnings
 from unittest.mock import ANY, Mock, patch
 
+import pkscreener.classes
+import pkscreener.classes.OtaUpdater
+
 warnings.simplefilter("ignore", DeprecationWarning)
 warnings.simplefilter("ignore", FutureWarning)
 import pandas as pd
@@ -55,15 +58,16 @@ def test_clearScreen():
 def test_showDevInfo():
     # Mocking the input() function
     with patch("builtins.input", return_value="Y") as mock_input:
-        result = tools.showDevInfo()
-        # Assert that input() is called with the correct argument
-        mock_input.assert_called_once_with(
-            colorText.FAIL
-            + "[+] Press <Enter> to continue!"
-            + colorText.END
-        )
-        # Assert that the result is not None
-        assert result is not None
+        with patch("pkscreener.classes.OtaUpdater.OTAUpdater.showWhatsNew", return_value="Some exciting new features!"):
+            result = tools.showDevInfo()
+            # Assert that input() is called with the correct argument
+            mock_input.assert_called_once_with(
+                colorText.FAIL
+                + "  [+] Press <Enter> to continue!"
+                + colorText.END
+            )
+            # Assert that the result is not None
+            assert result is not None
 
 
 # Positive test case for setLastScreenedResults() function
@@ -338,7 +342,7 @@ def test_promptRSIValues():
         # Assert that input() is called twice with the correct arguments
         mock_input.assert_called_with(
             colorText.WARN
-            + "[+] Enter Max RSI value (Default=68): "
+            + "  [+] Enter Max RSI value (Default=68): "
             + colorText.END
         )
         # Assert that the result is the correct tuple
@@ -353,7 +357,7 @@ def test_promptCCIValues():
         # Assert that input() is called twice with the correct arguments
         mock_input.assert_called_with(
             colorText.WARN
-            + "[+] Enter Max CCI value (Default=300): "
+            + "  [+] Enter Max CCI value (Default=300): "
             + colorText.END
         )
         # Assert that the result is the correct tuple
@@ -368,7 +372,7 @@ def test_promptVolumeMultiplier():
         # Assert that input() is called with the correct argument
         mock_input.assert_called_once_with(
             colorText.WARN
-            + "\n[+] Enter Min Volume ratio value (Default = 2.5): "
+            + "\n  [+] Enter Min Volume ratio value (Default = 2.5): "
             + colorText.END
         )
         # Assert that the result is 2
@@ -378,12 +382,14 @@ def test_promptVolumeMultiplier():
 # Positive test case for promptReversalScreening() function
 def test_promptReversalScreening():
     # Mocking the input() function
+    from pkscreener.classes.Utility import configManager
+    defaultMALength = 9 if configManager.duration.endswith("m") else 50
     with patch("builtins.input", side_effect=["4", "50"]) as mock_input:
-        result = tools.promptReversalScreening()
         # Assert that input() is called with the correct argument
+        result = tools.promptReversalScreening()
         mock_input.assert_called_with(
             colorText.WARN
-            + "\n[+] Enter MA Length (E.g. 9,10,20,50 or 200) (Default=50): "
+            + f"\n  [+] Enter MA Length (E.g. 9,10,20,50 or 200) (Default={defaultMALength}): "
             + colorText.END
         )
         # Assert that the result is the correct tuple
@@ -397,7 +403,7 @@ def test_promptReversalScreening_4x_Does_not_raise_value_error():
         # Assert that input() is called with the correct argument
         mock_input.assert_called_with(
             colorText.FAIL
-            + "\n[+] Invalid Option Selected. Press <Enter> to try again..."
+            + "\n  [+] Invalid Option Selected. Press <Enter> to try again..."
             + colorText.END
         )
         # Assert that the result is the correct tuple
@@ -411,7 +417,7 @@ def test_promptReversalScreening_Input6():
         # Assert that input() is called with the correct argument
         mock_input.assert_called_with(
             colorText.WARN
-            + "\n[+] Enter NR timeframe [Integer Number] (E.g. 4, 7, etc.) (Default=4): "
+            + "\n  [+] Enter NR timeframe [Integer Number] (E.g. 4, 7, etc.) (Default=4): "
             + colorText.END
         )
         # Assert that the result is the correct tuple
@@ -424,7 +430,7 @@ def test_promptReversalScreening_Input1():
         result = tools.promptReversalScreening()
         # Assert that input() is called with the correct argument
         mock_input.assert_called_with(
-            colorText.WARN + """[+] Select Option:""" + colorText.END
+            colorText.WARN + """  [+] Select Option:""" + colorText.END
         )
         # Assert that the result is the correct tuple
         assert result == (1, None)
@@ -437,7 +443,7 @@ def test_promptChartPatterns():
         result = tools.promptChartPatterns()
         # Assert that input() is called with the correct arguments
         mock_input.assert_called_with(
-            colorText.WARN + "[+] Select Option:" + colorText.END
+            colorText.WARN + "  [+] Select Option:" + colorText.END
         )
         # Assert that the result is the correct tuple
         assert result == (4, 0)
@@ -450,7 +456,7 @@ def test_promptChartPatterns_Input1():
         # Assert that input() is called with the correct arguments
         mock_input.assert_called_with(
             colorText.WARN
-            + "\n[+] How many candles (TimeFrame) to look back Inside Bar formation? (Default=3): "
+            + "\n  [+] How many candles (TimeFrame) to look back Inside Bar formation? (Default=3): "
             + colorText.END
         )
         # Assert that the result is the correct tuple
@@ -464,7 +470,7 @@ def test_promptChartPatterns_Input3():
         # Assert that input() is called with the correct arguments
         mock_input.assert_called_with(
             colorText.WARN
-            + "\n[+] Enter Percentage within which all MA/EMAs should be (Ideal: 0.1-2%)? (Default=0.8): "
+            + "\n  [+] Enter Percentage within which all MA/EMAs should be (Ideal: 0.1-2%)? (Default=0.8): "
             + colorText.END
         )
         # Assert that the result is the correct tuple
