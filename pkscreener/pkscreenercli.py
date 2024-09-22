@@ -298,6 +298,12 @@ argParser.add_argument(
     help="User defined tag value(s)",
     required=False,
 )
+argParser.add_argument(
+    "--testalloptions",
+    action="store_true",
+    help="runs and tests all options",
+    required=False,
+)
 
 def get_debug_args():
     global args
@@ -307,9 +313,12 @@ def get_debug_args():
             args = list(args)
         return args
     except NameError as e:
-        # args = sys.argv[1:]
-        # if isinstance(args,list) and len(args) > 0:
-        #     return args[0].split(" ")
+        args = sys.argv[1:]
+        if isinstance(args,list):
+            if len(args) == 1:
+                return args[0].split(" ")
+            else:
+                return args
         return None
     except TypeError as e: # NameSpace object is not iterable
         return args
@@ -482,6 +491,13 @@ def runApplication():
     if args.runintradayanalysis:
         generateIntradayAnalysisReports(args)
     else:
+        if args.testalloptions:
+            allMenus = menus.allMenus(index=0)
+            for scanOption in allMenus:
+                 args.options = f"{scanOption}:SBIN,"
+                 _, _ = main(userArgs=args)
+            sys.exit(0)
+
         if args.barometer:
             sendGlobalMarketBarometer(userArgs=args)
         else:
@@ -592,7 +608,7 @@ def runApplication():
                     MarketMonitor().refresh(screen_df=results,screenOptions=monitorOption_org, chosenMenu=chosenMenu[:120],dbTimestamp=f"{dbTimestamp} | CycleTime:{elapsed_time}s",telegram=args.telegram)
 
 def generateIntradayAnalysisReports(args):
-    from pkscreener.globals import main, sendQuickScanResult,sendMessageToTelegramChannel, sendGlobalMarketBarometer, updateMenuChoiceHierarchy, isInterrupted, refreshStockData, closeWorkersAndExit, resetUserMenuChoiceOptions
+    from pkscreener.globals import main, isInterrupted, closeWorkersAndExit, resetUserMenuChoiceOptions
     from pkscreener.classes.MenuOptions import menus, PREDEFINED_SCAN_MENU_TEXTS, PREDEFINED_PIPED_MENU_OPTIONS,PREDEFINED_SCAN_MENU_VALUES
     from PKDevTools.classes import Archiver
     maxdisplayresults = configManager.maxdisplayresults
@@ -676,14 +692,14 @@ def saveSendFinalOutcomeDataframe(optionalFinalOutcome_df):
             for stock, df_group in df_grouped:
                 if stock == "BASKET":
                     if final_df is None:
-                        final_df = df_group[["Pattern","MA-Signal","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
+                        final_df = df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]
                     else:
-                        final_df = pd.concat([final_df, df_group[["Pattern","MA-Signal","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
+                        final_df = pd.concat([final_df, df_group[["Pattern","LTP","LTP@Alert","SqrOffLTP","SqrOffDiff","EoDDiff","DayHigh","DayHighDiff"]]], axis=0)
         except:
             pass
         if final_df is not None and not final_df.empty:
             with pd.option_context('mode.chained_assignment', None):
-                final_df = final_df[["Pattern","MA-Signal","LTP@Alert","LTP","EoDDiff","SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff"]]
+                final_df = final_df[["Pattern","LTP@Alert","LTP","EoDDiff","SqrOffLTP","SqrOffDiff","DayHigh","DayHighDiff"]]
                 final_df.rename(
                         columns={
                             "Pattern": "Scan Name",
@@ -694,7 +710,8 @@ def saveSendFinalOutcomeDataframe(optionalFinalOutcome_df):
                             },
                             inplace=True,
                         )
-                # final_df.dropna(inplace=True)
+                final_df.dropna(inplace=True)
+                final_df.dropna(how= "all", axis=1, inplace=True)
             mark_down = colorText.miniTabulator().tabulate(
                                     final_df,
                                     headers="keys",
