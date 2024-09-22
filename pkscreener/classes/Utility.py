@@ -833,13 +833,20 @@ class tools:
                     pickle.dump(stockDict.copy(), f, protocol=pickle.HIGHEST_PROTOCOL)
                     OutputControls().printOutput(colorText.GREEN + "=> Done." + colorText.END)
                 if downloadOnly:
-                    OutputControls().printOutput(colorText.GREEN + f"=> {cache_file}" + colorText.END)
-                    Committer.execOSCommand(f"git add {cache_file} -f >/dev/null 2>&1")
                     if "RUNNER" not in os.environ.keys():
                         copyFilePath = os.path.join(Archiver.get_user_data_dir(), f"copy_{fileName}")
                         cacheFileSize = os.stat(cache_file).st_size if os.path.exists(cache_file) else 0
                         if os.path.exists(cache_file) and cacheFileSize >= 1024*1024*40:
                             shutil.copy(cache_file,copyFilePath) # copy is the saved source of truth
+
+                    rootDirs = [Archiver.get_user_data_dir(),Archiver.get_user_indices_dir(),outputFolder]
+                    patterns = ["*.csv","*.pkl"]
+                    for dir in rootDirs:
+                        for pattern in patterns:
+                            for f in glob.glob(pattern, root_dir=dir, recursive=True):
+                                OutputControls().printOutput(colorText.GREEN + f"=> {f}" + colorText.END)
+                                Committer.execOSCommand(f"git add {f} -f >/dev/null 2>&1")
+
             except pickle.PicklingError as e:  # pragma: no cover
                 default_logger().debug(e, exc_info=True)
                 OutputControls().printOutput(
@@ -1047,7 +1054,7 @@ class tools:
     def tryFetchFromServer(cache_file):
         OutputControls().printOutput(
                     colorText.FAIL
-                    + "  [+] Loading data from server. Market Stock Data is not cached, or forced to redownload .."
+                    + "[+] Loading data from server. Market Stock Data is not cached, or forced to redownload .."
                     + colorText.END
                 )
         OutputControls().printOutput(
@@ -1186,8 +1193,12 @@ class tools:
                 
         return stockDict,stockDataLoaded
 
+    def make_hyperlink(value):
+        url = "https://in.tradingview.com/chart?symbol=NSE:{}"
+        return '=HYPERLINK("%s", "%s")' % (url.format(value), value)
+
     # Save screened results to excel
-    def promptSaveResults(sheetName,df, defaultAnswer=None,pastDate=None):
+    def promptSaveResults(sheetName,df_save, defaultAnswer=None,pastDate=None):
         """
         Tries to save the dataframe output into an excel file.
 
@@ -1196,6 +1207,20 @@ class tools:
         If it fails to save, it will then try to save to Desktop and then eventually into
         a temporary directory.
         """
+        data = df_save.copy()
+        try:
+            data = data.fillna(0)
+            data = data.replace([np.inf, -np.inf], 0)
+        except:
+            pass
+        try:
+            data.reset_index(inplace=True)
+            with pd.option_context('mode.chained_assignment', None):
+                data["Stock"] = data['Stock'].apply(tools.make_hyperlink)
+            data.set_index("Stock", inplace=True)
+        except:
+            pass
+        df = data
         isSaved = False
         try:
             if defaultAnswer is None:

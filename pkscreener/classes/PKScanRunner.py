@@ -132,9 +132,39 @@ class PKScanRunner:
         actualHistoricalDuration = (samplingDuration - fillerPlaceHolder)
         return samplingDuration,fillerPlaceHolder,actualHistoricalDuration
 
-    def addStocksToItemList(userArgs, testing, testBuild, newlyListedOnly, downloadOnly, minRSI, maxRSI, insideBarToLookback, respChartPattern, daysForLowestVolume, backtestPeriod, reversalOption, maLength, listStockCodes, menuOption, exchangeName,executeOption, volumeRatio, items, daysInPast):
+    def addScansWithDefaultParams(userArgs, testing, testBuild, newlyListedOnly, downloadOnly, backtestPeriod, listStockCodes, menuOption, exchangeName,executeOption, volumeRatio, items, daysInPast,runOption=""):
+        import json
+        defaultOptionsDict = {}
+        with open("defaults.json","r") as f:
+            defaultOptionsDict = json.loads(f.read())
+        for scanOption in defaultOptionsDict.keys():
+            items = PKScanRunner.addStocksToItemList(userArgs=userArgs,
+                                                     testing=testing,
+                                                     testBuild=testBuild,
+                                                     newlyListedOnly=newlyListedOnly,
+                                                     downloadOnly=downloadOnly,
+                                                     minRSI=defaultOptionsDict[scanOption]["minRSI"],
+                                                     maxRSI=defaultOptionsDict[scanOption]["maxRSI"],
+                                                     insideBarToLookback=defaultOptionsDict[scanOption]["insideBarToLookback"],
+                                                     respChartPattern=defaultOptionsDict[scanOption]["respChartPattern"],
+                                                     daysForLowestVolume=defaultOptionsDict[scanOption]["daysForLowestVolume"],
+                                                     backtestPeriod=backtestPeriod,
+                                                     reversalOption=defaultOptionsDict[scanOption]["reversalOption"],
+                                                     maLength=defaultOptionsDict[scanOption]["maLength"],
+                                                     listStockCodes=listStockCodes,
+                                                     menuOption="X",
+                                                     exchangeName=exchangeName,
+                                                     executeOption=int(scanOption.split(":")[2]), 
+                                                     volumeRatio=volumeRatio,
+                                                     items=items,
+                                                     daysInPast=daysInPast,
+                                                     runOption=scanOption)
+        return items
+    
+    def addStocksToItemList(userArgs, testing, testBuild, newlyListedOnly, downloadOnly, minRSI, maxRSI, insideBarToLookback, respChartPattern, daysForLowestVolume, backtestPeriod, reversalOption, maLength, listStockCodes, menuOption, exchangeName,executeOption, volumeRatio, items, daysInPast,runOption=""):
         moreItems = [
                         (
+                            runOption,
                             menuOption,
                             exchangeName,
                             executeOption,
@@ -169,6 +199,7 @@ class PKScanRunner:
                         for stock in listStockCodes
                     ]
         items.extend(moreItems)
+        return items
 
     def getStocksListForScan(userArgs, menuOption, totalStocksInReview, downloadedRecently, daysInPast):
         savedStocksCount = 0
@@ -295,7 +326,7 @@ class PKScanRunner:
                 )
 
         OutputControls().printOutput(colorText.END)
-        if userPassedArgs is not None and (userPassedArgs.monitor is None and "|" not in userPassedArgs.options) and not userPassedArgs.options.upper().startswith("C"):
+        if userPassedArgs is not None and not userPassedArgs.testalloptions and (userPassedArgs.monitor is None and "|" not in userPassedArgs.options) and not userPassedArgs.options.upper().startswith("C"):
             # Don't terminate the multiprocessing clients if we're 
             # going to pipe the results from an earlier run
             # or we're running in monitoring mode
