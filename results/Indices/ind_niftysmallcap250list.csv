@@ -3,7 +3,7 @@ Company Name,Industry,Symbol,Series,ISIN Code
 Aarti Industries Ltd.,Chemicals,AARTIIND,EQ,INE769A01020
 Aavas Financiers Ltd.,Financial Services,AAVAS,EQ,INE216P01012
 Action Construction Equipment Ltd.,Capital Goods,ACE,EQ,INE731H01025
-Aegis Logistics Ltd.,Oil Gas & Consumable Fuels,AEGISCHEM,EQ,INE208C01025
+Aegis Logistics Ltd.,Oil Gas & Consumable Fuels,AEGISLOG,EQ,INE208C01025
 Aether Industries Ltd.,Chemicals,AETHER,EQ,INE0BWX01014
 Affle (India) Ltd.,Information Technology,AFFLE,EQ,INE00WC01027
 Alembic Pharmaceuticals Ltd.,Healthcare,APLLTD,EQ,INE901L01018
@@ -73,7 +73,7 @@ E.I.D. Parry (India) Ltd.,Chemicals,EIDPARRY,EQ,INE126A01031
 EIH Ltd.,Consumer Services,EIHOTEL,EQ,INE230A01023
 EPL Ltd.,Capital Goods,EPL,EQ,INE255A01020
 Easy Trip Planners Ltd.,Consumer Services,EASEMYTRIP,EQ,INE07O001026
-Elecon Engineering Co. Ltd.,Capital Goods,ELECON,EQ,INE205B01023
+Elecon Engineering Co. Ltd.,Capital Goods,ELECON,EQ,INE205B01031
 Elgi Equipments Ltd.,Capital Goods,ELGIEQUIP,EQ,INE285A01027
 Engineers India Ltd.,Construction,ENGINERSIN,EQ,INE510A01028
 Equitas Small Finance Bank Ltd.,Financial Services,EQUITASBNK,EQ,INE063P01018
@@ -119,7 +119,6 @@ IRB Infrastructure Developers Ltd.,Construction,IRB,EQ,INE821I01022
 IRCON International Ltd.,Construction,IRCON,EQ,INE962Y01021
 ITI Ltd.,Telecommunication,ITI,EQ,INE248A01017
 India Cements Ltd.,Construction Materials,INDIACEM,EQ,INE383A01012
-Indiabulls Housing Finance Ltd.,Financial Services,IBULHSGFIN,EQ,INE148I01020
 Indiamart Intermesh Ltd.,Consumer Services,INDIAMART,EQ,INE933S01016
 Indian Energy Exchange Ltd.,Financial Services,IEX,EQ,INE022Q01020
 Indian Overseas Bank,Financial Services,IOB,EQ,INE565A01014
@@ -131,7 +130,7 @@ JBM Auto Ltd.,Automobile and Auto Components,JBMA,EQ,INE927D01044
 JK Lakshmi Cement Ltd.,Construction Materials,JKLAKSHMI,EQ,INE786A01032
 JK Paper Ltd.,Forest Materials,JKPAPER,EQ,INE789E01012
 JM Financial Ltd.,Financial Services,JMFINANCIL,EQ,INE780C01023
-Jai Balaji Industries Ltd.,Metals & Mining,JAIBALAJI,BE,INE091G01018
+Jai Balaji Industries Ltd.,Metals & Mining,JAIBALAJI,EQ,INE091G01018
 Jammu & Kashmir Bank Ltd.,Financial Services,J&KBANK,EQ,INE168A01041
 Jindal Saw Ltd.,Capital Goods,JINDALSAW,EQ,INE324A01024
 Jubilant Ingrevia Ltd.,Chemicals,JUBLINGREA,EQ,INE0BY001018
@@ -141,14 +140,14 @@ Justdial Ltd.,Consumer Services,JUSTDIAL,EQ,INE599M01018
 Jyothy Labs Ltd.,Fast Moving Consumer Goods,JYOTHYLAB,EQ,INE668F01031
 KNR Constructions Ltd.,Construction,KNRCON,EQ,INE634I01029
 KRBL Ltd.,Fast Moving Consumer Goods,KRBL,EQ,INE001B01026
-KSB Ltd.,Capital Goods,KSB,EQ,INE999A01015
+KSB Ltd.,Capital Goods,KSB,EQ,INE999A01023
 Kalpataru Projects International Ltd.,Construction,KPIL,EQ,INE220B01022
 Karur Vysya Bank Ltd.,Financial Services,KARURVYSYA,EQ,INE036D01028
 Kaynes Technology India Ltd.,Capital Goods,KAYNES,EQ,INE918Z01012
 Kec International Ltd.,Construction,KEC,EQ,INE389H01022
 Kfin Technologies Ltd.,Financial Services,KFINTECH,EQ,INE138Y01010
-Krishna Institute of Medical Sciences Ltd.,Healthcare,KIMS,EQ,INE967H01017
-Latent View Analytics Ltd.,Information Technology,LATENTVIEW,BE,INE0I7C01011
+Krishna Institute of Medical Sciences Ltd.,Healthcare,KIMS,EQ,INE967H01025
+Latent View Analytics Ltd.,Information Technology,LATENTVIEW,EQ,INE0I7C01011
 Laxmi Organic Industries Ltd.,Chemicals,LXCHEM,EQ,INE576O01020
 Lemon Tree Hotels Ltd.,Consumer Services,LEMONTREE,EQ,INE970X01018
 MMTC Ltd.,Services,MMTC,EQ,INE123F01029
@@ -200,14 +199,15 @@ Ramkrishna Forgings Ltd.,Automobile and Auto Components,RKFORGE,EQ,INE399G01023
 Rashtriya Chemicals & Fertilizers Ltd.,Chemicals,RCF,EQ,INE027A01015
 Ratnamani Metals & Tubes Ltd.,Capital Goods,RATNAMANI,EQ,INE703B01027
 RattanIndia Enterprises Ltd.,Consumer Services,RTNINDIA,EQ,INE834M01019
-Raymond Ltd.,Textiles,RAYMOND,EQ,INE301A01014
+Raymond Ltd.,Realty,RAYMOND,EQ,INE301A01014
 Redington Ltd.,Services,REDINGTON,EQ,INE891D01026
 Restaurant Brands Asia Ltd.,Consumer Services,RBA,EQ,INE07T201019
 Route Mobile Ltd.,Telecommunication,ROUTE,EQ,INE450U01017
 SBFC Finance Ltd.,Financial Services,SBFC,EQ,INE423Y01016
 Safari Industries (India) Ltd.,Consumer Durables,SAFARI,EQ,INE429E01023
+Sammaan Capital Ltd.,Financial Services,SAMMAANCAP,EQ,INE148I01020
 Sanofi India Ltd.,Healthcare,SANOFI,EQ,INE058A01010
-Sapphire Foods India Ltd.,Consumer Services,SAPPHIRE,EQ,INE806T01012
+Sapphire Foods India Ltd.,Consumer Services,SAPPHIRE,EQ,INE806T01020
 Saregama India Ltd,Media Entertainment & Publication,SAREGAMA,EQ,INE979A01025
 Schneider Electric Infrastructure Ltd.,Capital Goods,SCHNEIDER,EQ,INE839M01018
 Shree Renuka Sugars Ltd.,Fast Moving Consumer Goods,RENUKA,EQ,INE087H01022
