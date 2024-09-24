@@ -360,6 +360,7 @@ level3_X_Reversal_MenuDict = {
 level3_X_PotentialProfitable_MenuDict = {
     "1": "Frequent highs with bullish MAs",
     "2": "Bullish Today for Previous Day Open/Close (PDO/PDC) with 1M Volume",
+    "3": "FnO Trades > 2% /Above 50MA/200MA(5Min)",
 
     "0": "Cancel",
 }
@@ -697,12 +698,13 @@ class menus:
                 menuText = menuText + m.render(coloredValues=([] if asList else coloredValues))
         return menuText
 
-    def renderPinnedMenu(self,substitutes=[]):
+    def renderPinnedMenu(self,substitutes=[],skip=[]):
         return self.renderMenuFromDictionary(dict=Pin_MenuDict,
                                                  exceptionKeys=["M"],
                                                  coloredValues=(["M"]),
                                                  defaultMenu="M",
-                                                 substitutes = substitutes)
+                                                 substitutes = substitutes,
+                                                 skip=skip)
     
     def renderForMenu(self, selectedMenu:menu=None, skip=[], asList=False, renderStyle=None):
         if selectedMenu is None and self.level == 0:
