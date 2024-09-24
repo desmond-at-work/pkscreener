@@ -1002,9 +1002,15 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             indexOption = 0
             selectedChoice["0"] = "F"
             selectedChoice["1"] = "0"
+            executeOption = None
             shouldSuppress = not OutputControls().enableMultipleLineOutput
-            with SuppressOutput(suppress_stderr=shouldSuppress, suppress_stdout=shouldSuppress):
-                listStockCodes = fetcher.fetchStockCodes(tickerOption=0, stockCode=None)
+            if userPassedArgs is not None and userPassedArgs.options is not None and len(userPassedArgs.options.split(":")) >= 3:
+                stockOptions = userPassedArgs.options.split(":")
+                stockOptions = userPassedArgs.options.split(":")[2 if len(stockOptions)<=3 else 3]
+                listStockCodes = stockOptions.replace(".",",").split(",")
+            if listStockCodes is None or len(listStockCodes) == 0:
+                with SuppressOutput(suppress_stderr=shouldSuppress, suppress_stdout=shouldSuppress):
+                    listStockCodes = fetcher.fetchStockCodes(tickerOption=0, stockCode=None)
             Utility.tools.clearScreen(clearAlways=True,forceTop=True)
         else:
             Utility.tools.clearScreen(clearAlways=True,forceTop=True)
@@ -1549,6 +1555,9 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             return None, None
         else:
             selectedChoice["3"] = str(maLength)
+        if maLength == 3:
+            userPassedArgs.maxdisplayresults = max(configManager.maxdisplayresults,2000)
+            
     if executeOption == 34:
         if userPassedArgs.options is None:
             configManager.anchoredAVWAPPercentage = input(colorText.WARN + f"Enter the anchored-VWAP percentage gap from close price ({colorText.GREEN}Optimal:1{colorText.END}, Current={configManager.anchoredAVWAPPercentage}):") or configManager.anchoredAVWAPPercentage
@@ -1976,7 +1985,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
         pass
     if ("RUNNER" not in os.environ.keys() and 
         not testing and 
-        menuOption not in ["F"] and
+        #menuOption not in ["F"] and
         (userPassedArgs is None or 
             (userPassedArgs is not None and 
                 (userPassedArgs.user is None or 
@@ -1991,7 +2000,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             if len(monitorOption) == 0:
                 for choice in selectedChoice.keys():
                     monitorOption = (f"{monitorOption}:" if len(monitorOption) > 0  else '') + f"{selectedChoice[choice]}"
-            m0.renderPinnedMenu(substitutes=[monitorOption,len(prevOutput_results),monitorOption])
+            m0.renderPinnedMenu(substitutes=[monitorOption,len(prevOutput_results),monitorOption],skip=(["1","2"] if menuOption in ["F"] else []))
             pinOption = input(
                     colorText.FAIL + "  [+] Select option: "
                 ) or 'M'
@@ -2154,10 +2163,20 @@ def loadDatabaseOrFetch(downloadOnly, listStockCodes, menuOption, indexOption):
                     exchangeSuffix = "" if (indexOption == 15 or (configManager.defaultIndex == 15 and indexOption == 0)) else ".NS",
                     userDownloadOption = menuOption
             )
-    if menuOption not in ["C"] and (userPassedArgs.monitor is not None or "|" in userPassedArgs.options) :#not configManager.isIntradayConfig() and configManager.calculatersiintraday:
+    if menuOption not in ["C"] and (userPassedArgs.monitor is not None or "|" in userPassedArgs.options or (":33:3:" in userPassedArgs.options or ":32:" in userPassedArgs.options or ":38:" in userPassedArgs.options)) :#not configManager.isIntradayConfig() and configManager.calculatersiintraday:
         prevDuration = configManager.duration
+        prevPeriod = configManager.period
         candleDuration = (userPassedArgs.intraday if (userPassedArgs is not None and userPassedArgs.intraday is not None) else ("1m" if configManager.duration.endswith("d") else configManager.duration))
         configManager.toggleConfig(candleDuration=candleDuration,clearCache=False)
+        if ":33:3:" in userPassedArgs.options:
+            exists, cache_file = Utility.tools.afterMarketStockDataExists(True, forceLoad=(menuOption in ["X", "B", "G", "S", "F"]))
+            cache_file = os.path.join(Archiver.get_user_data_dir(),cache_file)
+            cacheFileSize = os.stat(cache_file).st_size if os.path.exists(cache_file) else 0
+            if cacheFileSize < 1024*1024*100: # 1m data for 5d is at least 450MB
+                configManager.deleteFileWithPattern(pattern="*intraday_stock_data_*.pkl",rootDir=Archiver.get_user_data_dir())
+            configManager.duration = "1m"
+            configManager.period = "5d"
+            configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
         # We also need to load the intraday data to be able to calculate intraday RSI
         stockDictSecondary = Utility.tools.loadStockData(
                         stockDictSecondary,
@@ -2170,7 +2189,9 @@ def loadDatabaseOrFetch(downloadOnly, listStockCodes, menuOption, indexOption):
                         exchangeSuffix = "" if (indexOption == 15 or (configManager.defaultIndex == 15 and indexOption == 0)) else ".NS",
                         userDownloadOption = menuOption
                 )
-        configManager.toggleConfig(candleDuration=prevDuration, clearCache=False)
+        configManager.duration = prevDuration
+        configManager.period = prevPeriod
+        configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
     loadedStockData = True
     return stockDictPrimary, stockDictSecondary
 
