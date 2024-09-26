@@ -447,7 +447,7 @@ def runApplication():
     global results, resultStocks, plainResults, dbTimestamp, elapsed_time, start_time,argParser
     from pkscreener.classes.MenuOptions import menus, PREDEFINED_SCAN_MENU_TEXTS, PREDEFINED_PIPED_MENU_ANALYSIS_OPTIONS,PREDEFINED_SCAN_MENU_VALUES
     args = get_debug_args()
-    
+    monitorOption = None
     if not isinstance(args,argparse.Namespace):
         argsv = argParser.parse_known_args(args=args)
         # argsv = argParser.parse_known_args()
@@ -744,9 +744,13 @@ def saveSendFinalOutcomeDataframe(optionalFinalOutcome_df):
 
 def checkIntradayComponent(args, monitorOption):
     lastComponent = monitorOption.split(":")[-1]
+    if "i" not in lastComponent:
+        possiblePositions = monitorOption.split(":i")
+        if len(possiblePositions) > 1:
+            lastComponent = f"i {possiblePositions[1]}"
                 # previousCandleDuration = configManager.duration
     if "i" in lastComponent:
-                    # We need to switch to intraday scan
+        # We need to switch to intraday scan
         monitorOption = monitorOption.replace(lastComponent,"")
         args.intraday = lastComponent.replace("i","").strip()
         configManager.toggleConfig(candleDuration=args.intraday, clearCache=False)
@@ -836,7 +840,13 @@ def pkscreenercli():
         # configManager.restartRequestsCache()
         # args.monitor = configManager.defaultMonitorOptions
         if args.monitor is not None:
-            MarketMonitor(monitors=args.monitor.split("~") if len(args.monitor)>5 else configManager.defaultMonitorOptions.split("~"),
+            from pkscreener.classes.MenuOptions import NA_NON_MARKET_HOURS
+            configuredMonitorOptions = configManager.defaultMonitorOptions.split("~")
+            for monitorOption in NA_NON_MARKET_HOURS:
+                if monitorOption in configuredMonitorOptions and not PKDateUtilities.isTradingTime():
+                    # These can't be run in non-market hours
+                    configuredMonitorOptions.remove(monitorOption)
+            MarketMonitor(monitors=args.monitor.split("~") if len(args.monitor) > 5 else configuredMonitorOptions,
                         maxNumResultsPerRow=configManager.maxDashboardWidgetsPerRow,
                         maxNumColsInEachResult=6,
                         maxNumRowsInEachResult=10,
