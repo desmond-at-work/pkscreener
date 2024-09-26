@@ -644,7 +644,7 @@ class StockScreener:
                                 daysToLookback=configManager.daysToLookback,
                                 alreadyBrokenout=(executeOption == 2),
                             )
-                        if isNotMonitoringDashboard and executeOption != 3:
+                        if (isNotMonitoringDashboard and executeOption != 3) or (self.configManager.alwaysExportToExcel):
                             screener.validateConsolidation(
                                 processedData,
                                 screeningDictionary,
@@ -753,8 +753,8 @@ class StockScreener:
             # if userArgsLog:
             #     hostRef.default_logger.debug(f"Exception:{stock}: {e}", exc_info=True)
             if testbuild or printCounter:
-                # import traceback
-                # traceback.print_exc()
+                import traceback
+                traceback.print_exc()
                 OutputControls().printOutput(e)
                 OutputControls().printOutput(
                     colorText.FAIL
