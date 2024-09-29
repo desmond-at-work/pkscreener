@@ -65,6 +65,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["AUTOGRAPH_VERBOSITY"] = "0"
 
 printenabled=False
+LoggedIn = False
 originalStdOut=None
 original__stdout=None
 cron_runs=0
@@ -465,7 +466,7 @@ def runApplication():
         args.triggertimestamp = int(PKDateUtilities.currentDateTimestamp())
     else:
         args.triggertimestamp = int(args.triggertimestamp)
-    if args.systemlaunched:
+    if args.systemlaunched and args.options is not None:
         args.systemlaunched = args.options
     
     # if sys.argv[0].endswith(".py"):
@@ -807,6 +808,18 @@ def pipeResults(prevOutput,args):
         return True and hasFoundStocks
     return False
 
+def removeOldInstances():
+    import glob
+    pattern = "pkscreenercli*"
+    thisInstance = sys.argv[0]
+    for f in glob.glob(pattern, root_dir=os.getcwd(), recursive=True):
+        fileToDelete = f if (os.sep in f and f.startswith(thisInstance[:10])) else os.path.join(os.getcwd(),f)
+        if not fileToDelete.endswith(thisInstance):
+            try:
+                os.remove(fileToDelete)
+            except:
+                pass
+        
 def pkscreenercli():
     global originalStdOut, args
     if sys.platform.startswith("darwin"):
@@ -821,37 +834,41 @@ def pkscreenercli():
                 traceback.print_exc()
             pass
     try:
+        removeOldInstances()
         OutputControls(enableMultipleLineOutput=(args is None or args.monitor is None or args.runintradayanalysis)).printOutput("",end="\r")
-        if (args is not None and args.answerdefault is not None and str(args.answerdefault).lower() == "n"):
-            OutputControls().printOutput(f"{colorText.FAIL}You seem to have passed disagreement to the Disclaimer and Terms Of Service of PKScreener by passing in {colorText.END}{colorText.WARN}--answerdefault N or -a N{colorText.END}. Exiting now!")
-            sleep(5)
-            sys.exit(0)
-        allArgs = args.__dict__
-        userAcceptance = False
-        disclaimerLink = '\x1b[97m\x1b]8;;https://pkjmesra.github.io/PKScreener/Disclaimer.txt\x1b\\https://pkjmesra.github.io/PKScreener/Disclaimer.txt\x1b]8;;\x1b\\\x1b[0m'
-        tosLink = '\x1b[97m\x1b]8;;https://pkjmesra.github.io/PKScreener/tos.txt\x1b\\https://pkjmesra.github.io/PKScreener/tos.txt\x1b]8;;\x1b\\\x1b[0m'
-        for argKey in allArgs.keys():
-            arg = allArgs[argKey]
-            if arg is not None and arg:
-                userAcceptance = True
-                OutputControls().printOutput(f"{colorText.GREEN}By using this Software and passing a value for [{argKey}={arg}], you agree to\n[+] having read through the Disclaimer{colorText.END} ({disclaimerLink})\n[+]{colorText.GREEN} and accept Terms Of Service {colorText.END}({tosLink}){colorText.GREEN} of PKScreener. {colorText.END}\n[+] {colorText.WARN}If that is not the case, you MUST immediately terminate PKScreener by pressing Ctrl+C now!{colorText.END}")
-                sleep(2)
-                break
-        if not userAcceptance and (args is not None and args.answerdefault is not None and str(args.answerdefault).lower() != "y") or (args is not None and args.answerdefault is None):
-            userAcceptance = input(f"{colorText.WARN}By using this Software, you agree to\n[+] having read through the Disclaimer {colorText.END}({disclaimerLink}){colorText.WARN}\n[+] and accept Terms Of Service {colorText.END}({tosLink}){colorText.WARN} of PKScreener ? {colorText.END}(Y/N){colorText.GREEN}[Default: Y] :{colorText.END}") or "Y"
-            if str(userAcceptance).lower() != "y":
-                OutputControls().printOutput(f"{colorText.FAIL}You seem to have passed disagreement to the Disclaimer and not accepted Terms Of Service of PKScreener. {colorText.END}{colorText.WARN}Exiting now!{colorText.END}")
+        configManager.getConfig(ConfigManager.parser)
+        userAcceptance = configManager.tosAccepted
+        if not configManager.tosAccepted:
+            if (args is not None and args.answerdefault is not None and str(args.answerdefault).lower() == "n"):
+                OutputControls().printOutput(f"{colorText.FAIL}You seem to have passed disagreement to the Disclaimer and Terms Of Service of PKScreener by passing in {colorText.END}{colorText.WARN}--answerdefault N or -a N{colorText.END}. Exiting now!")
                 sleep(5)
                 sys.exit(0)
-
-        configManager.getConfig(ConfigManager.parser)
+            allArgs = args.__dict__
+            disclaimerLink = '\x1b[97m\x1b]8;;https://pkjmesra.github.io/PKScreener/Disclaimer.txt\x1b\\https://pkjmesra.github.io/PKScreener/Disclaimer.txt\x1b]8;;\x1b\\\x1b[0m'
+            tosLink = '\x1b[97m\x1b]8;;https://pkjmesra.github.io/PKScreener/tos.txt\x1b\\https://pkjmesra.github.io/PKScreener/tos.txt\x1b]8;;\x1b\\\x1b[0m'
+            for argKey in allArgs.keys():
+                arg = allArgs[argKey]
+                if arg is not None and arg:
+                    userAcceptance = True
+                    OutputControls().printOutput(f"{colorText.GREEN}By using this Software and passing a value for [{argKey}={arg}], you agree to\n[+] having read through the Disclaimer{colorText.END} ({disclaimerLink})\n[+]{colorText.GREEN} and accept Terms Of Service {colorText.END}({tosLink}){colorText.GREEN} of PKScreener. {colorText.END}\n[+] {colorText.WARN}If that is not the case, you MUST immediately terminate PKScreener by pressing Ctrl+C now!{colorText.END}")
+                    sleep(2)
+                    break
+        if not userAcceptance and ((args is not None and args.answerdefault is not None and str(args.answerdefault).lower() != "y") or (args is not None and args.answerdefault is None)):
+            userAcceptance = input(f"{colorText.WARN}By using this Software, you agree to\n[+] having read through the Disclaimer {colorText.END}({disclaimerLink}){colorText.WARN}\n[+] and accept Terms Of Service {colorText.END}({tosLink}){colorText.WARN} of PKScreener ? {colorText.END}(Y/N){colorText.GREEN} [Default: {colorText.END}{colorText.FAIL}N{colorText.END}{colorText.GREEN}] :{colorText.END}") or "N"
+            if str(userAcceptance).lower() != "y":
+                OutputControls().printOutput(f"\n{colorText.WARN}You seem to have\n    [+] passed disagreement to the Disclaimer and \n    [+] not accepted Terms Of Service of PKScreener.\n{colorText.END}{colorText.FAIL}[+] You MUST read and agree to the disclaimer and MUST accept the Terms of Service to use PKScreener.{colorText.END}\n\n{colorText.WARN}Exiting now!{colorText.END}")
+                sleep(5)
+                sys.exit(0)
         try:
+            from pkscreener.classes import VERSION
             # Reset logging. If the user indeed passed the --log flag, it will be enabled later anyways
             del os.environ['PKDevTools_Default_Log_Level']
-            configManager.logsEnabled = False
-            configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
         except:
             pass
+        configManager.logsEnabled = False
+        configManager.tosAccepted = True
+        configManager.appVersion = VERSION
+        configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
         import atexit
         atexit.register(exitGracefully)
         # Set the trigger timestamp
@@ -925,7 +942,7 @@ def pkscreenercli():
             configManager.setConfig(
                 ConfigManager.parser, default=True, showFileCreatedText=False
             )
-        if args.systemlaunched:
+        if args.systemlaunched and args.options is not None:
             args.systemlaunched = args.options
             
         if args.telegram:
@@ -963,6 +980,12 @@ def pkscreenercli():
         if args.minprice:
             configManager.minLTP = args.minprice
             configManager.setConfig(ConfigManager.parser, default=True, showFileCreatedText=False)
+        global LoggedIn
+        if not LoggedIn and not args.telegram and not args.bot and not args.systemlaunched:
+            from pkscreener.classes.PKUserRegistration import PKUserRegistration
+            if not PKUserRegistration.login():
+                sys.exit(0)
+            LoggedIn = True
         if args.testbuild and not args.prodbuild:
             OutputControls().printOutput(
                 colorText.FAIL

@@ -204,6 +204,15 @@ m4 = menus()
 objectDictionary = {}
 nse = nseStockDataFetcher()
 
+if args.user is None:
+    try:
+        from PKDevTools.classes.Telegram import get_secrets
+        Channel_Id, _, _, _ = get_secrets()
+        if Channel_Id is not None and len(str(Channel_Id)) > 0:
+            args.user = int(f"-{Channel_Id}")
+    except:
+        pass
+        
 def aset_output(name, value):
     if "GITHUB_OUTPUT" in os.environ.keys():
         with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
@@ -545,6 +554,8 @@ def triggerScanWorkflowActions(launchLocal=False, scanDaysInPast=0):
         sleep(60) # Wait for alert time
     # Trigger intraday pre-defined piped scanners
     if PKDateUtilities.currentDateTime() <= PKDateUtilities.currentDateTime(simulate=True,hour=MarketHours().closeHour,minute=MarketHours().closeMinute):
+        if not shouldRunWorkflow():
+            return
         for scanIndex in PREDEFINED_SCAN_ALERT_MENU_KEYS:
             triggerRemoteScanAlertWorkflow(f"P:1:{scanIndex}:", branch)
 
@@ -580,6 +591,8 @@ def triggerScanWorkflowActions(launchLocal=False, scanDaysInPast=0):
     # runIntradayAnalysisScans(branch="main")
 
 def runIntradayAnalysisScans(branch="gh-pages"):
+    if not shouldRunWorkflow():
+        return
     # Trigger the intraday analysis only in the 2nd half after it gets trigerred anytime after 3 PM IST
     if PKDateUtilities.currentDateTime() >= PKDateUtilities.currentDateTime(simulate=True,hour=MarketHours().closeHour,minute=MarketHours().closeMinute-30):
         while (PKDateUtilities.currentDateTime() < PKDateUtilities.currentDateTime(simulate=True,hour=MarketHours().closeHour+1,minute=MarketHours().closeMinute-15)):
