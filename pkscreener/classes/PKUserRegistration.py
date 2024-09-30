@@ -34,6 +34,7 @@ from PKDevTools.classes.log import default_logger
 
 class PKUserRegistration:
     def login():
+        return True
         try:
             dbManager = DBManager()
             if "RUNNER" in os.environ.keys() or dbManager.shouldSkipLoading():
@@ -49,15 +50,15 @@ class PKUserRegistration:
         if configManager.userID is not None and len(configManager.userID) >= 1:
             username = input(f"[+] Your Username or UserID from telegram: (Default: {colorText.GREEN}{configManager.userID}{colorText.END}): ") or configManager.userID
         else:
-            username = input(f"[+] Your Username or UserID from telegram:")
+            username = input(f"[+] {colorText.GREEN}Your Username or UserID from telegram: {colorText.END}")
         if username is None or len(username) <= 0:
             OutputControls().printOutput(f"{colorText.WARN}[+] You MUST register or login to use PKScreener!{colorText.END}\n[+] {colorText.FAIL}Exiting now!{colorText.END}")
             sleep(5)
             sys.exit(0)
-        otp = input(f"[+] OTP received on telegram from @nse_pkscreener_bot:")
+        otp = input(f"[+] {colorText.WARN}OTP received on telegram from {colorText.END}{colorText.GREEN}@nse_pkscreener_bot (Use command /otp to get OTP): {colorText.END}")
         invalidOTP = False
         try:
-            otp = int(otp)
+            otpTest = int(otp)
         except Exception as e:
             default_logger().debug(e, exc_info=True)
             invalidOTP = True
@@ -67,7 +68,15 @@ class PKUserRegistration:
             sleep(3)
             return PKUserRegistration.login()
         try:
-            if dbManager.validateOTP(username,int(otp)):
+            userUsedUserID = False
+            try:
+                usernameInt = int(username)
+                userUsedUserID = True
+            except:
+                userUsedUserID = False
+                pass
+
+            if dbManager.validateOTP(username,str(otp)):
                 configManager.userID = username
                 configManager.setConfig(parser,default=True,showFileCreatedText=False)
                 Utility.tools.clearScreen(userArgs=None, clearAlways=True, forceTop=True)
@@ -75,6 +84,6 @@ class PKUserRegistration:
         except Exception as e:
             default_logger().debug(e, exc_info=True)
             pass
-        OutputControls().printOutput(f"{colorText.WARN}[+] Invalid userID/username or OTP!{colorText.END}\n[+] {colorText.FAIL}Please try again or press Ctrl+C to exit!{colorText.END}")
+        OutputControls().printOutput(f"{colorText.WARN}[+] Invalid userID/username or OTP!{colorText.END}\n{colorText.GREEN}[+] May be try entering the {'UserID instead of username?' if userUsedUserID else 'Username instead of userID?'} {colorText.END}\n[+] {colorText.FAIL}Please try again or press Ctrl+C to exit!{colorText.END}")
         sleep(3)
         return PKUserRegistration.login()

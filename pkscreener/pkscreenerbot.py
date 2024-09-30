@@ -215,8 +215,9 @@ def otp(update: Update, context: CallbackContext) -> str:
         if otpValue == 0:
             updatedResults = f"We are having difficulty generating OTP for your {userText}. Please try again later."
         else:
-            updatedResults = f"Use your {userText} \nwith the following OTP to login to PKScreener:\n{otpValue}\n\nValid only for 30 seconds."
+            updatedResults = f"Use your {userText} \nwith the following OTP to login to PKScreener:\n{otpValue}\n\nValid only for {configManager.otpInterval} seconds."
     update.message.reply_text(sanitiseTexts(updatedResults))
+    shareUpdateWithChannel(update=update, context=context, optionChoices=f"/otp\n{updatedResults}")
     return START_ROUTES
     
 def start(update: Update, context: CallbackContext, updatedResults=None, monitorIndex=0,chosenBotMenuOption="") -> str:
@@ -1308,7 +1309,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
         asList=True,
         renderStyle=MenuRenderStyle.STANDALONE,
     )
-    cmdText = ""
+    cmdText = "\n/otp to generate an OTP to login to PKScreener desktop console"
     for cmd in cmds:
         cmdText = f"{cmdText}\n\n{cmd.commandTextKey()} for {cmd.commandTextLabel()}"
     reply_markup = default_markup([])
