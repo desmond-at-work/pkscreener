@@ -174,6 +174,7 @@ args = argsv[0]
 originalStdOut = sys.stdout
 original__stdout = sys.__stdout__
 
+# args.barometer = True
 # args.force = True
 # args.misc = True
 # args.scans = True
@@ -607,7 +608,7 @@ def runIntradayAnalysisScans(branch="gh-pages"):
             print(f"Waiting for {(MarketHours().closeHour+1):02}:{(MarketHours().closeMinute):02} PM IST...")
             sleep(300) # Wait for 4:15 PM IST because the download data will take time and we need the downloaded data
             # to be uploaded to actions-data-download folder on github before the intraday analysis can be run.
-        triggerRemoteScanAlertWorkflow("X:12: --runintradayanalysis -u -1001785195297", branch)
+        triggerRemoteScanAlertWorkflow("C:12: --runintradayanalysis -u -1001785195297", branch)
 
 def triggerRemoteScanAlertWorkflow(scanOptions, branch):
     cmd_options = scanOptions.replace("_",":")
@@ -615,7 +616,7 @@ def triggerRemoteScanAlertWorkflow(scanOptions, branch):
         alertTrigger = 'Y'
     else:
         alertTrigger = 'N'
-    if args.user is None or len(args.user) == 0:
+    if args.user is None or len(str(args.user)) == 0:
         args.user = ""
         postdata = (
                     '{"ref":"'
