@@ -389,8 +389,11 @@ class tools:
             pass
         return roundValue
     
-    def stockNameFromDecoratedName(stockName):
-        cleanName = tools.removeAllColorStyles(stockName.replace("\x1B]8;;","")).split("\x1B\\")[1]
+    def stockNameFromDecoratedName(stockName): 
+        cleanName = tools.removeAllColorStyles(stockName.replace("\x1B]8;;",""))
+        decoratedParts = cleanName.split("\x1B\\")
+        if len(decoratedParts) > 1:
+            cleanName = decoratedParts[1]
         return cleanName
     
     def stockDecoratedName(stockName,exchangeName):
@@ -1691,7 +1694,7 @@ class tools:
     
     def getMaxColumnWidths(df):
         columnWidths = [None]
-        addnlColumnWidths = [40 if (x in ["Trend(22Prds)"] or "-Pd" in x) else (20 if (x in ["Pattern"]) else ((25 if (x in ["MA-Signal"] or "ScanOption" in x) else None))) for x in df.columns]
+        addnlColumnWidths = [40 if (x in ["Trend(22Prds)"] or "-Pd" in x) else (20 if (x in ["Pattern"]) else ((25 if (x in ["MA-Signal"]) else (10 if "ScanOption" in x else None)))) for x in df.columns]
         columnWidths.extend(addnlColumnWidths)
         columnWidths = columnWidths[:-1]
         return columnWidths
