@@ -316,6 +316,7 @@ def re_split(s):
         if s and (s[0] == '"' or s[0] == "'") and s[0] == s[-1]:
             return s[1:-1]
         return s
+    # pieces = [p for p in re.split("( |\\\".*?\\\"|'.*?')", s) if p.strip()]
     return [strip_quotes(p).replace('\\"', '"').replace("\\'", "'") for p in re.findall(r'(?:[^"\s]*"(?:\\.|[^"])*"[^"\s]*)+|(?:[^\'\s]*\'(?:\\.|[^\'])*\'[^\'\s]*)+|[^\s]+', s)]
 
 def get_debug_args():
@@ -597,6 +598,10 @@ def runApplication():
                 closeWorkersAndExit()
                 exitGracefully()
                 sys.exit(0)
+            except KeyboardInterrupt:
+                closeWorkersAndExit()
+                exitGracefully()
+                sys.exit(0)
             except Exception as e:
                 default_logger().debug(e, exc_info=True)
                 if args.log:
@@ -700,6 +705,10 @@ def generateIntradayAnalysisReports(args):
                 configManager.deleteFileWithPattern(rootDir=Archiver.get_user_data_dir(), pattern="*intraday_stock_data_*.pkl")
             if isInterrupted():
                 break
+        except KeyboardInterrupt:
+            closeWorkersAndExit()
+            exitGracefully()
+            sys.exit(0)
         except Exception as e:
             OutputControls().printOutput(e)
             if args.log:
@@ -871,6 +880,7 @@ def removeOldInstances():
 def updateConfig(args):
     if args is None:
         return
+    configManager.getConfig(ConfigManager.parser)
     if args.intraday:
         configManager.toggleConfig(candleDuration=args.intraday, clearCache=False)
         if configManager.candlePeriodFrequency not in ["d","mo"] or configManager.candleDurationFrequency not in ["m"]:
@@ -878,9 +888,10 @@ def updateConfig(args):
             configManager.duration = args.intraday
             configManager.setConfig(ConfigManager.parser,default=True, showFileCreatedText=False)
     elif configManager.candlePeriodFrequency not in ["y","max","mo"] or configManager.candleDurationFrequency not in ["d","wk","mo","h"]:
-        configManager.period = "1y"
-        configManager.duration = "1d"
-        configManager.setConfig(ConfigManager.parser,default=True, showFileCreatedText=False)
+        if args.answerdefault is not None or args.systemlaunched:
+            configManager.period = "1y"
+            configManager.duration = "1d"
+            configManager.setConfig(ConfigManager.parser,default=True, showFileCreatedText=False)
 
 def pkscreenercli():
     global originalStdOut, args
@@ -1071,6 +1082,11 @@ def pkscreenercli():
             sys.exit(0)
         else:
             runApplicationForScreening()
+    except KeyboardInterrupt:
+        from pkscreener.globals import closeWorkersAndExit
+        closeWorkersAndExit()
+        exitGracefully()
+        sys.exit(0)
     except Exception as e:
         if "RUNNER" not in os.environ.keys() and ('PKDevTools_Default_Log_Level' in os.environ.keys() and os.environ["PKDevTools_Default_Log_Level"] != str(log.logging.NOTSET)):
                 OutputControls().printOutput(
@@ -1167,4 +1183,7 @@ if __name__ == "__main__":
     try:
         pkscreenercli()
     except KeyboardInterrupt:
+        from pkscreener.globals import closeWorkersAndExit
+        closeWorkersAndExit()
+        exitGracefully()
         sys.exit(0)

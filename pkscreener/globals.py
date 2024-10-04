@@ -1388,6 +1388,15 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             selectedChoice["3"] = str(respChartPattern)
             selectedChoice["4"] = str(insideBarToLookback) if (respChartPattern in [1, 2, 3] and (userPassedArgs is not None and userPassedArgs.pipedmenus is not None)) else str(maLength)
             selectedChoice["5"] = str(maLength) if (respChartPattern in [1, 2, 3] and (userPassedArgs is not None and userPassedArgs.pipedmenus is not None)) else ""
+        if respChartPattern == 7: # candle stick patterns
+            maLength = "0"
+            m0.renderCandleStickPatterns()
+            filterOption = input(colorText.FAIL + "  [+] Select option: ") or "0"
+            if str(filterOption).upper() not in ["0","M"]:
+                maLength = str(filterOption)
+            elif str(filterOption).upper() in ["M"]:
+                return None, None
+
     if executeOption == 8:
         if len(options) >= 5:
             if "".join(str(options[3]).split(".")).isdecimal():
@@ -3312,6 +3321,8 @@ def sendQuickScanResult(
         if (("RUNNER" not in os.environ.keys()) or ("RUNNER" in os.environ.keys() and os.environ["RUNNER"] == "LOCAL_RUN_SCANNER")):
             return
     try:
+        if not is_token_telegram_configured():
+            return
         Utility.tools.tableToImage(
             markdown_results,
             tabulated_results,
@@ -3701,7 +3712,8 @@ def saveNotifyResultsFile(
 
 def sendGlobalMarketBarometer(userArgs=None):
     from pkscreener.classes import Barometer
-    caption = "Global Market Barometer with India market Performance (top) and Valuation (bottom)"
+    suggestion_text = "Feel free to share on social media.Try @nse_pkscreener_bot for more scans! <i><b><u>You agree that you have read</u></b>:https://pkjmesra.github.io/PKScreener/Disclaimer.txt</i> <b>and accept TOS</b>: https://pkjmesra.github.io/PKScreener/tos.txt <b>STOP using and exit from channel/group, if you do not.</b>"
+    caption = f"Global Market Barometer with India market Performance (top) and Valuation (bottom).{suggestion_text}"
     gmbPath = Barometer.getGlobalMarketBarometerValuation()
     try:
         if gmbPath is not None:
@@ -3883,7 +3895,8 @@ def showBacktestResults(backtest_df:pd.DataFrame, sortKey="Stock", optionalName=
         colored_text = colored_text.encode('utf-8').decode(STD_ENCODING)
         with open(filename, "w") as f:
             f.write(colored_text)
-        Committer.execOSCommand(f"git add {filename} -f >/dev/null 2>&1")
+        if "RUNNER" in os.environ.keys():
+            Committer.execOSCommand(f"git add {filename} -f >/dev/null 2>&1")
     try:
         # Save in excel file as well if the config is set to do so
         if configManager.alwaysExportToExcel:
@@ -3908,7 +3921,8 @@ def showBacktestResults(backtest_df:pd.DataFrame, sortKey="Stock", optionalName=
             oneline_text = f"{oneline_text}<td class='w'>{PKDateUtilities.currentDateTime().strftime('%Y/%m/%d')}</td><td class='w'>{round(elapsed_time,2)}</td>"
             with open(onelineSummaryFile, "w") as f:
                 f.write(oneline_text)
-            Committer.execOSCommand(f"git add {onelineSummaryFile} -f >/dev/null 2>&1")
+            if "RUNNER" in os.environ.keys():
+                Committer.execOSCommand(f"git add {onelineSummaryFile} -f >/dev/null 2>&1")
 
 def scanOutputDirectory(backtest=False):
     dirName = 'actions-data-scan' if not backtest else "Backtest-Reports"
