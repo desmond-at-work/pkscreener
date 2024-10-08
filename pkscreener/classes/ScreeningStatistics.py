@@ -28,7 +28,7 @@ import sys
 import warnings
 import datetime
 import numpy as np
-
+import os
 warnings.simplefilter("ignore", DeprecationWarning)
 warnings.simplefilter("ignore", FutureWarning)
 import pandas as pd
@@ -38,6 +38,7 @@ import pkscreener.classes.Utility as Utility
 from pkscreener import Imports
 from pkscreener.classes.Pktalib import pktalib
 from PKDevTools.classes.OutputControls import OutputControls
+from PKDevTools.classes import Archiver
 from PKNSETools.morningstartools import Stock
 
 if sys.version_info >= (3, 11):
@@ -1881,11 +1882,42 @@ class ScreeningStatistics:
                 mf = f"MFI:{colorText.DOWNARROW} {change_millions}"
                 mfs = colorText.FAIL + mf + colorText.END
 
+        # Let's get the large deals for the stock
+        try:
+            dealsInfo = ""
+            symbolKeys = ["Ⓑ","Ⓛ","Ⓢ"]
+            largeDealsData, filePath, modifiedDateTime = Archiver.findFileInAppResultsDirectory(directory=Archiver.get_user_data_dir(), fileName="large_deals.json")
+            dealsFileSize = os.stat(filePath).st_size if os.path.exists(filePath) else 0
+            if dealsFileSize > 0 and len(largeDealsData) > 0:
+                import json
+                countKeys = ["BULK_DEALS","BLOCK_DEALS","SHORT_DEALS"]
+                dataKeys = ["BULK_DEALS_DATA","BLOCK_DEALS_DATA","SHORT_DEALS_DATA"]
+                jsonDeals = json.loads(largeDealsData)
+                index = 0
+                for countKey in countKeys:
+                    if countKey in jsonDeals.keys() and int(jsonDeals[countKey]) > 0 and dataKeys[index] in jsonDeals.keys() and len(jsonDeals[dataKeys[index]]) > 0:
+                        for deal in jsonDeals[dataKeys[index]]:
+                            if stock.upper() == deal["symbol"]:
+                                buySellInfo = "" if deal["buySell"] is None else (f"({'B' if deal['buySell'] == 'BUY' else 'S'})")
+                                qty = int(deal["qty"])
+                                qtyInfo = f"({int(qty/1000000)}M)" if qty >= 1000000 else (f"({int(qty/1000)}K)" if qty >= 1000 else f"({qty})")
+                                dealsInfo = f"{dealsInfo} {buySellInfo}{qtyInfo}{symbolKeys[index]}"
+                    index += 1
+        except:
+            pass
+
         saved = self.findCurrentSavedValue(screenDict,saveDict,"Trend")
         decision_scr = (colorText.GREEN if isUptrend else (colorText.FAIL if isDowntrend else colorText.WARN)) + f"{decision}" + colorText.END
         dma50decision_scr = (colorText.GREEN if is50DMAUptrend else (colorText.FAIL if is50DMADowntrend else colorText.WARN)) + f"{dma50decision}" + colorText.END
-        saveDict["Trend"] = f"{saved[1]} {decision} {dma50decision} {mf}"
-        screenDict["Trend"] = f"{saved[0]} {decision_scr} {dma50decision_scr} {mfs}"
+        saveDict["Trend"] = f"{saved[1]} {decision} {dma50decision} {mf}{dealsInfo}"
+        for symbol in symbolKeys:
+            dealParts = dealsInfo.split(" ")
+            dealPartsRefined = []
+            for dealPart in dealParts:
+                dealPart = dealPart.replace(symbol,(colorText.GREEN+symbol+colorText.END) if ("(B)" in dealPart) else ((colorText.FAIL+symbol+colorText.END) if ("(S)" in dealPart) else symbol))
+                dealPartsRefined.append(dealPart)
+            dealsInfo = " ".join(dealPartsRefined).strip()
+        screenDict["Trend"] = f"{saved[0]} {decision_scr} {dma50decision_scr} {mfs}{dealsInfo}"
         saveDict["MFI"] = mf_inst_ownershipChange
         screenDict["MFI"] = mf_inst_ownershipChange
         return isUptrend, mf_inst_ownershipChange, fairValueDiff
@@ -3502,7 +3534,32 @@ class ScreeningStatistics:
                 saveDict["MA-Signal"] = saved[1] + maText + f"({percentageDiff}%)"
                 screenDict["MA-Signal"] = saved[0] + f"{colorText.GREEN}{maText}{colorText.END}{colorText.FAIL if abs(percentageDiff) > 1 else colorText.WARN}({percentageDiff}%){colorText.END}"
         return hasAtleastOneMACross
-    
+
+    def validatePriceActionCrossesForPivotPoint(self, df, screenDict, saveDict, pivotPoint="1", crossDirectionFromBelow=True):
+        if df is None or len(df) == 0:
+            return False
+        hasPriceCross = False
+        data = df.copy()
+        pp_map = {"1":"PP","2":"S1","3":"S2","4":"S3","5":"R1","6":"R2","7":"R3"}
+        if pivotPoint is not None and pivotPoint != "0" and str(pivotPoint).isnumeric():
+            ppToCheck = pp_map[str(pivotPoint)]
+            ppsr_df = pktalib.get_ppsr_df(data["High"],data["Low"],data["Close"],ppToCheck)
+            if ppsr_df is None:
+                return False
+            if crossDirectionFromBelow:
+                hasPriceCross = (ppsr_df["Close"].iloc[0] > ppsr_df[ppToCheck].iloc[0] and 
+                             ppsr_df["Close"].iloc[1] <= ppsr_df[ppToCheck].iloc[1])
+            else:
+                hasPriceCross = (ppsr_df["Close"].iloc[0] < ppsr_df[ppToCheck].iloc[0] and 
+                             ppsr_df["Close"].iloc[1] >= ppsr_df[ppToCheck].iloc[1])
+            if hasPriceCross:
+                percentageDiff = round(100*(ppsr_df["Close"].iloc[0]-ppsr_df[ppToCheck].iloc[0])/ppsr_df[ppToCheck].iloc[0],1)
+                saved = self.findCurrentSavedValue(screenDict,saveDict,"MA-Signal")
+                maText = f"Cross-{'FromBelow' if crossDirectionFromBelow else 'FromAbove'}({ppToCheck}:{ppsr_df[ppToCheck].iloc[0]})"
+                saveDict["MA-Signal"] = saved[1] + maText + f"({percentageDiff}%)"
+                screenDict["MA-Signal"] = saved[0] + f"{colorText.GREEN}{maText}{colorText.END}{colorText.FAIL if abs(percentageDiff) > 1 else colorText.WARN}({percentageDiff}%){colorText.END}"
+        return hasPriceCross
+
     # Validate if the stock prices are at least rising by 2% for the last 3 sessions
     def validatePriceRisingByAtLeast2Percent(self, df, screenDict, saveDict):
         if df is None or len(df) == 0:

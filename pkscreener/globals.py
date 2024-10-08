@@ -75,12 +75,15 @@ from PKDevTools.classes.OutputControls import OutputControls
 from pkscreener.classes.MenuOptions import (
     level0MenuDict,
     level1_X_MenuDict,
+    level1_P_MenuDict,
     level2_X_MenuDict,
+    level2_P_MenuDict,
     level3_X_ChartPattern_MenuDict,
     level3_X_PopularStocks_MenuDict,
     level3_X_PotentialProfitable_MenuDict,
     PRICE_CROSS_SMA_EMA_DIRECTION_MENUDICT,
     PRICE_CROSS_SMA_EMA_TYPE_MENUDICT,
+    PRICE_CROSS_PIVOT_POINT_TYPE_MENUDICT,
     level3_X_Reversal_MenuDict,
     level4_X_Lorenzian_MenuDict,
     level4_X_ChartPattern_Confluence_MenuDict,
@@ -253,7 +256,7 @@ def getScannerMenuChoices(
                 indexOption=indexOption, executeOption=executeOption
             )
     except KeyboardInterrupt:
-        input(
+        OutputControls().takeUserInput(
             colorText.FAIL
             + "  [+] Press <Enter> to Exit!"
             + colorText.END
@@ -397,7 +400,7 @@ def handleScannerExecuteOption4(executeOption, options):
             + "  [+] Error: Non-numeric value entered! Please try again!"
             + colorText.END
         )
-        input("Press <Enter> to continue...")
+        OutputControls().takeUserInput("Press <Enter> to continue...")
         return
     OutputControls().printOutput(colorText.END)
     global nValueForMenu 
@@ -414,7 +417,7 @@ def handleSecondaryMenuChoices(
     elif menuOption == "U":
         OTAUpdater.checkForUpdate(VERSION, skipDownload=testing)
         if defaultAnswer is None:
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
     elif menuOption == "T":
         if userPassedArgs is None or userPassedArgs.options is None:
             selectedMenu = m0.find(menuOption)
@@ -541,7 +544,7 @@ def initExecution(menuOption=None):
         selectedMenu = m0.find(menuOption)
         if selectedMenu is not None:
             if selectedMenu.menuKey == "Z":
-                input(
+                OutputControls().takeUserInput(
                     colorText.FAIL
                     + "  [+] Press <Enter> to Exit!"
                     + colorText.END
@@ -586,7 +589,7 @@ def initPostLevel0Execution(
         needsCalc = userPassedArgs is not None and userPassedArgs.backtestdaysago is not None
         pastDate = f"  [+] [ Running in Quick Backtest Mode for {colorText.WARN}{PKDateUtilities.nthPastTradingDateStringFromFutureDate(int(userPassedArgs.backtestdaysago) if needsCalc else 0)}{colorText.END} ]\n" if needsCalc else ""
         if indexOption is None:
-            indexOption = input(
+            indexOption = OutputControls().takeUserInput(
                 colorText.FAIL + f"{pastDate}  [+] Select option: "
             )
             OutputControls().printOutput(colorText.END, end="")
@@ -1023,9 +1026,13 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
     if menuOption in ["P"]:
         predefinedOption = None
         selPredefinedOption = None
+        selIndexOption = None
         if len(options) >= 3:
             predefinedOption = str(options[1])
             selPredefinedOption = str(options[2])
+            if len(options) >= 4:
+                selIndexOption = str(options[3])
+        selectedChoice["0"] = "P"
         updateMenuChoiceHierarchy()
         selectedMenu = m0.find(menuOption)
         m1.renderForMenu(selectedMenu)
@@ -1036,8 +1043,9 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
         OutputControls().printOutput(colorText.END, end="")
         if predefinedOption not in ["1","2","3","4"]:
             return None, None
+        selectedChoice["1"] = predefinedOption
+        updateMenuChoiceHierarchy()
         if predefinedOption in ["1", "4"]:
-            updateMenuChoiceHierarchy()
             selectedMenu = m1.find(predefinedOption)
             m2.renderForMenu(selectedMenu=selectedMenu)
             if selPredefinedOption is None:
@@ -1047,8 +1055,17 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 scannerOption = PIPED_SCANNERS[selPredefinedOption]
                 if predefinedOption == "4": # Watchlist
                     scannerOption = scannerOption.replace("-o 'X:12:","-o 'X:W:")
+                elif predefinedOption == "1": # Predefined
+                    if selIndexOption is None and (userPassedArgs is None or userPassedArgs.answerdefault is None):
+                        m1.renderForMenu(m0.find(key="X"),skip=["W","N","E","S","0","Z"])
+                        selIndexOption = input(colorText.FAIL + f"{pastDate}  [+] Select option: ") or str(configManager.defaultIndex)
+                        if "M" in selIndexOption:
+                            return None, None
+                    if selIndexOption is not None:
+                        scannerOption = scannerOption.replace("-o 'X:12:",f"-o 'X:{selIndexOption}:")
                 if userPassedArgs is not None:
                     userPassedArgs.usertag = PREDEFINED_SCAN_MENU_TEXTS[int(selPredefinedOption)-1]
+                selectedChoice["2"] = selPredefinedOption
                 updateMenuChoiceHierarchy()
                 if userPassedArgs.pipedmenus is not None:
                     chosenOptions = scannerOption.split("-o ")[1]
@@ -1078,7 +1095,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                         + colorText.END
                     )
                 if defaultAnswer is None:
-                    input("Press <Enter> to continue...")
+                    OutputControls().takeUserInput("Press <Enter> to continue...")
                 Utility.tools.clearScreen(clearAlways=True,forceTop=True)
                 return None, None
             else:
@@ -1087,7 +1104,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             # User chose custom
             menuOption = "X" # Let's have the user choose various scan options
             selectedMenu = m0.find(menuOption)
-            selectedChoice["0"] = selectedMenu.menuKey
+            # selectedChoice["0"] = selectedMenu.menuKey
             if userPassedArgs.pipedmenus is None:
                 userPassedArgs.pipedmenus = ""
         elif predefinedOption == "3":
@@ -1190,7 +1207,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             # reinstate whatever was the earlier saved value
             configManager.showPastStrategyData = savedValue
             if defaultAnswer is None:
-                input("Press <Enter> to continue...")
+                OutputControls().takeUserInput("Press <Enter> to continue...")
             return None, None
         else:
             userOptions = userOption.split(",")
@@ -1246,7 +1263,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 + "\n  [+] Error: Invalid values for RSI! Values should be in range of 0 to 100. Please try again!"
                 + colorText.END
             )
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
             return None, None
     if executeOption == 6:
         selectedMenu = m2.find(str(executeOption))
@@ -1415,7 +1432,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 + "\n  [+] Error: Invalid values for CCI! Values should be in range of -300 to 500. Please try again!"
                 + colorText.END
             )
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
             return None, None
     if executeOption == 9:
         if len(options) >= 4:
@@ -1431,7 +1448,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 + "\n  [+] Error: Invalid values for Volume Ratio! Value should be a positive number. Please try again!"
                 + colorText.END
             )
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
             return None, None
         else:
             configManager.volumeRatio = float(volumeRatio)
@@ -1468,7 +1485,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 )
                 finishScreening(downloadOnly=downloadOnly,testing=testing,stockDictPrimary=stockDictPrimary,configManager=configManager,loadCount=0,testBuild=testBuild,screenResults=screenResults,saveResults=saveResults,user=userPassedArgs.user)
                 if defaultAnswer is None:
-                    input("Press <Enter> to continue...")
+                    OutputControls().takeUserInput("Press <Enter> to continue...")
                 return None, None
             else:
                 listStockCodes = ",".join(list(screenResults.index))
@@ -1501,7 +1518,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 menuOption
             )
             if defaultAnswer is None:
-                input("Press <Enter> to continue...")
+                OutputControls().takeUserInput("Press <Enter> to continue...")
             return None, None
         else:
             listStockCodes = ",".join(list(screenResults.index))
@@ -1522,7 +1539,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             + colorText.END
         )
         if defaultAnswer is None:
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
         if userPassedArgs is not None and userPassedArgs.user is not None:
             sendMessageToTelegramChannel(message=message, user=userPassedArgs.user)
         return None, None
@@ -1618,7 +1635,34 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             smas = input(colorText.FAIL + "  [+] Price should cross which of these comma separated EMA/SMA(s): (e.g. 200 or 8,9,21,55,200) [Default: 200]:") or "200"
         insideBarToLookback = smas.split(",")
         selectedChoice["5"] = str(smas)
-        
+    if executeOption == 41:
+        Utility.tools.clearScreen(forceTop=True)
+        selectedMenu = m2.find(str(executeOption))
+        m3.renderForMenu(selectedMenu=selectedMenu)
+        if userPassedArgs.options is not None:
+            options = userPassedArgs.options.split(":")
+        if len(options) >=4:
+            pivotPoint = options[3]
+            pivotPoint = "1" if pivotPoint == "D" else pivotPoint
+        else:
+            pivotPoint = input(colorText.FAIL + "  [+] Select option: ") or "1"
+        if pivotPoint == "0" or not str(pivotPoint).isnumeric:
+            return None, None
+        selectedChoice["3"] = str(pivotPoint)
+        respChartPattern = pivotPoint
+        selectedMenu = m3.find(str(pivotPoint))
+        Utility.tools.clearScreen(forceTop=True)
+        m4.renderForMenu(selectedMenu=selectedMenu)
+        if len(options) >=5:
+            priceDirection = options[4]
+            priceDirection = "2" if priceDirection == "D" else priceDirection
+        else:
+            priceDirection = input(colorText.FAIL + "  [+] Select option: ") or "2"
+        if priceDirection == "0" or not str(priceDirection).isnumeric:
+            return None, None
+        selectedChoice["4"] = str(priceDirection)
+        reversalOption = (priceDirection == "2")
+
     if executeOption == 42:
         Utility.tools.getLastScreenedResults(defaultAnswer)
         return None, None
@@ -1628,7 +1672,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             + F"\n  [+] Error: Option {MAX_SUPPORTED_MENU_OPTION} to {MAX_MENU_OPTION} Not implemented yet! Press <Enter> to continue."
             + colorText.END
         )
-        input("Press <Enter> to continue...")
+        OutputControls().takeUserInput("Press <Enter> to continue...")
         return None, None
     if (
         not str(indexOption).isnumeric() and indexOption in ["W", "E", "M", "N", "Z", "S"]
@@ -1675,7 +1719,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
             elif indexOption == "M":
                 return None, None
             elif indexOption == "Z":
-                input(
+                OutputControls().takeUserInput(
                     colorText.FAIL
                     + "  [+] Press <Enter> to Exit!"
                     + colorText.END
@@ -1716,7 +1760,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 + "\n\n  [+] Oops! It looks like you don't have an Internet connectivity at the moment!"
                 + colorText.END
             )
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
             Utility.tools.clearScreen(clearAlways=True,forceTop=True)
             return None, None
         if userPassedArgs.options is None or len(userPassedArgs.options) == 0:
@@ -1981,12 +2025,12 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                 while sorting:
                     sorting = showSortedBacktestData(backtest_df, summary_df, sortKeys)
                 if defaultAnswer is None:
-                    input("Press <Enter> to continue...")
+                    OutputControls().takeUserInput("Press <Enter> to continue...")
             else:
                 OutputControls().printOutput("Finished backtesting with no results to show!")
         elif menuOption == "G":
             if defaultAnswer is None:
-                input("Press <Enter> to continue...")
+                OutputControls().takeUserInput("Press <Enter> to continue...")
     newlyListedOnly = False
     # Change the config back to usual
     resetConfigToDefault()
@@ -2229,6 +2273,7 @@ def loadDatabaseOrFetch(downloadOnly, listStockCodes, menuOption, indexOption):
         configManager.period = prevPeriod
         configManager.setConfig(ConfigManager.parser,default=True,showFileCreatedText=False)
     loadedStockData = True
+    Utility.tools.loadLargeDeals()
     return stockDictPrimary, stockDictSecondary
 
 def getLatestTradeDateTime(stockDictPrimary):
@@ -2341,7 +2386,7 @@ def addOrRunPipedMenus():
                 + colorText.END
             )
         if defaultAnswer is None:
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
         Utility.tools.clearScreen(clearAlways=True,forceTop=True)
         return None, None
     else:
@@ -2574,7 +2619,7 @@ def handleRequestForSpecificStocks(options, indexOption):
 
 def handleExitRequest(executeOption):
     if executeOption == "Z":
-        input(
+        OutputControls().takeUserInput(
             colorText.FAIL
             + "  [+] Press <Enter> to Exit!"
             + colorText.END
@@ -2597,64 +2642,78 @@ def updateMenuChoiceHierarchy():
     global userPassedArgs, selectedChoice, menuChoiceHierarchy
     try:
         menuChoiceHierarchy = f'{level0MenuDict[selectedChoice["0"]].strip()}'
-        menuChoiceHierarchy = f'{menuChoiceHierarchy}>{level1_X_MenuDict[selectedChoice["1"]].strip()}'
-        menuChoiceHierarchy = f'{menuChoiceHierarchy}>{level2_X_MenuDict[selectedChoice["2"]].strip()}'
-        if selectedChoice["2"] == "6":
-            menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level3_X_Reversal_MenuDict[selectedChoice["3"]].strip()}'
-            )
-            if len(selectedChoice) >= 5 and selectedChoice["3"] in ["7","10"]:
+        topLevelMenuDict  = level1_X_MenuDict if selectedChoice["0"] not in "P" else level1_P_MenuDict
+        level2MenuDict = level2_X_MenuDict if selectedChoice["0"] not in "P" else level2_P_MenuDict
+        if len(selectedChoice["1"]) > 0:
+            menuChoiceHierarchy = f'{menuChoiceHierarchy}>{topLevelMenuDict[selectedChoice["1"]].strip()}'
+        if len(selectedChoice["2"]) > 0:
+            menuChoiceHierarchy = f'{menuChoiceHierarchy}>{level2MenuDict[selectedChoice["2"]].strip()}'
+        if selectedChoice["0"] not in "P":
+            if selectedChoice["2"] == "6":
                 menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level4_X_Lorenzian_MenuDict[selectedChoice["4"]].strip()}'
-            )
-        elif selectedChoice["2"] in ["30"]:
-            if len(selectedChoice) >= 3:
+                    menuChoiceHierarchy
+                    + f'>{level3_X_Reversal_MenuDict[selectedChoice["3"]].strip()}'
+                )
+                if len(selectedChoice) >= 5 and selectedChoice["3"] in ["7","10"]:
+                    menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{level4_X_Lorenzian_MenuDict[selectedChoice["4"]].strip()}'
+                )
+            elif selectedChoice["2"] in ["30"]:
+                if len(selectedChoice) >= 3:
+                    menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{level4_X_Lorenzian_MenuDict[selectedChoice["3"]].strip()}'
+                )
+            elif selectedChoice["2"] == "7":
                 menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level4_X_Lorenzian_MenuDict[selectedChoice["3"]].strip()}'
-            )
-        elif selectedChoice["2"] == "7":
-            menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level3_X_ChartPattern_MenuDict[selectedChoice["3"]].strip()}'
-            )
-            if len(selectedChoice) >= 5 and selectedChoice["3"] == "3":
+                    menuChoiceHierarchy
+                    + f'>{level3_X_ChartPattern_MenuDict[selectedChoice["3"]].strip()}'
+                )
+                if len(selectedChoice) >= 5 and selectedChoice["3"] == "3":
+                    menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{level4_X_ChartPattern_Confluence_MenuDict[selectedChoice["4"]].strip()}'
+                )
+                elif len(selectedChoice) >= 5 and selectedChoice["3"] == "6":
+                    menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{level4_X_ChartPattern_BBands_SQZ_MenuDict[selectedChoice["4"]].strip()}'
+                )
+                elif len(selectedChoice) >= 5 and selectedChoice["3"] == "9":
+                    menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{level4_X_ChartPattern_MASignalMenuDict[selectedChoice["4"]].strip()}'
+                )
+            elif selectedChoice["2"] == "21":
                 menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level4_X_ChartPattern_Confluence_MenuDict[selectedChoice["4"]].strip()}'
-            )
-            elif len(selectedChoice) >= 5 and selectedChoice["3"] == "6":
+                    menuChoiceHierarchy
+                    + f'>{level3_X_PopularStocks_MenuDict[selectedChoice["3"]].strip()}'
+                )
+            elif selectedChoice["2"] == "33":
                 menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level4_X_ChartPattern_BBands_SQZ_MenuDict[selectedChoice["4"]].strip()}'
-            )
-            elif len(selectedChoice) >= 5 and selectedChoice["3"] == "9":
+                    menuChoiceHierarchy
+                    + f'>{level3_X_PotentialProfitable_MenuDict[selectedChoice["3"]].strip()}'
+                )
+            elif selectedChoice["2"] == "40":
                 menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level4_X_ChartPattern_MASignalMenuDict[selectedChoice["4"]].strip()}'
-            )
-        elif selectedChoice["2"] == "21":
-            menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level3_X_PopularStocks_MenuDict[selectedChoice["3"]].strip()}'
-            )
-        elif selectedChoice["2"] == "33":
-            menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{level3_X_PotentialProfitable_MenuDict[selectedChoice["3"]].strip()}'
-            )
-        elif selectedChoice["2"] == "40":
-            menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{PRICE_CROSS_SMA_EMA_DIRECTION_MENUDICT[selectedChoice["3"]].strip()}'
-            )
-            menuChoiceHierarchy = (
-                menuChoiceHierarchy
-                + f'>{PRICE_CROSS_SMA_EMA_TYPE_MENUDICT[selectedChoice["4"]].strip()}'
-            )
-            
+                    menuChoiceHierarchy
+                    + f'>{PRICE_CROSS_SMA_EMA_DIRECTION_MENUDICT[selectedChoice["3"]].strip()}'
+                )
+                menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{PRICE_CROSS_SMA_EMA_TYPE_MENUDICT[selectedChoice["4"]].strip()}'
+                )
+            elif selectedChoice["2"] == "41":
+                menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{PRICE_CROSS_PIVOT_POINT_TYPE_MENUDICT[selectedChoice["3"]].strip()}'
+                )
+                menuChoiceHierarchy = (
+                    menuChoiceHierarchy
+                    + f'>{PRICE_CROSS_SMA_EMA_DIRECTION_MENUDICT[selectedChoice["4"]].strip()}'
+                )
+        
         intraday = "(Intraday)" if ("Intraday" not in menuChoiceHierarchy and (userPassedArgs is not None and userPassedArgs.intraday) or configManager.isIntradayConfig()) else ""
         menuChoiceHierarchy = f"{menuChoiceHierarchy}{intraday}"
         global nValueForMenu
@@ -3679,7 +3738,7 @@ def saveNotifyResultsFile(
         needsCalc = userPassedArgs is not None and userPassedArgs.backtestdaysago is not None
         pastDate = PKDateUtilities.nthPastTradingDateStringFromFutureDate(int(userPassedArgs.backtestdaysago) if needsCalc else 0) if needsCalc else None
         filename = Utility.tools.promptSaveResults(choices,
-            saveResults, defaultAnswer=defaultAnswer,pastDate=pastDate)
+            saveResults, defaultAnswer=defaultAnswer,pastDate=pastDate,screenResults=screenResults)
         # User triggered telegram bot request
         # Group user Ids are < 0, individual ones are > 0
         # if filename is not None and user is not None and int(str(user)) > 0:
@@ -3709,7 +3768,7 @@ def saveNotifyResultsFile(
             , enableMultipleLineOutput=True
         )
         if defaultAnswer is None:
-            input("Press <Enter> to continue...")
+            OutputControls().takeUserInput("Press <Enter> to continue...")
 
 def sendGlobalMarketBarometer(userArgs=None):
     from pkscreener.classes import Barometer

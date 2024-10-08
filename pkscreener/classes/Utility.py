@@ -186,7 +186,7 @@ class tools:
         OutputControls().printOutput(colorText.BLUE + latestInfo + colorText.END)
         OutputControls().printOutput(colorText.FAIL + donationInfo + colorText.END)
         if defaultAnswer is None:
-            input(
+            OutputControls().takeUserInput(
                 colorText.FAIL
                 + "  [+] Press <Enter> to continue!"
                 + colorText.END
@@ -271,7 +271,7 @@ class tools:
                 + colorText.END
             )
         if defaultAnswer is None:
-            input(
+            OutputControls().takeUserInput(
                 colorText.GREEN
                 + "  [+] Press <Enter> to continue.."
                 + colorText.END
@@ -755,13 +755,13 @@ class tools:
         # if 'RUNNER' not in os.environ.keys() and 'PKDevTools_Default_Log_Level' in os.environ.keys():
         # im.show()
 
-    def wrapFitLegendText(table, backtestSummary, legendText):
+    def wrapFitLegendText(table=None, backtestSummary=None, legendText=None):
         wrapper = textwrap.TextWrapper(
             width=2
             * int(
                 len(table.split("\n")[0])
                 if (table is not None and len(table) > 0)
-                else (len(backtestSummary.split("\n")[0]) if backtestSummary is not None else 500)
+                else (len(backtestSummary.split("\n")[0]) if backtestSummary is not None else 80)
             )
         )
         word_list = wrapper.wrap(text=legendText)
@@ -807,7 +807,7 @@ class tools:
                         fontPath = "/usr/share/fonts/truetype/freefont/FreeMono.ttf"
         return fontPath
 
-    def getLegendHelpText(table,backtestSummary):
+    def getLegendHelpText(table=None,backtestSummary=None):
         legendText = "\n***1.Stock***: This is the NSE symbol/ticker for a company. Stocks that are NOT stage two, are coloured red.***2.Consol.***: It shows the price range in which stock is trading for the last 22 trading sessions(22 trading sessions per month)***3.Breakout(22Prds)***: The BO is Breakout level based on last 22 sessions. R is the resistance level (if available)."
         legendText = f"{legendText} An investor should consider both BO & R level to analyse entry / exits in their trading lessons. If the BO value is green, it means the stock has already broken out (is above BO level). If BO is in red, it means the stock is yet to break out.***4.LTP***: This is the last/latest trading/closing price of the given stock on a given date at NSE. The LTP in green/red means the"
         legendText = f"{legendText} stock price has increased / decreased since last trading session. (1.5%, 1.3%,1.8%) with LTP shows the stock price rose by 1.5%, 1.3% and 1.8% in the last 1, 2 and 3 trading sessions respectively.***5.%Chng***: This is the change(rise/fall in percentage) in closing/trading price from the previous trading session's closing price. Green means that price rose from the previous"
@@ -825,8 +825,9 @@ class tools:
         legendText = f"{legendText} red, example, -5.67%, it means the price actually decreased by 5.67%. Gains are in green and losses are in red in this grid. The Date column has the date(s) on which that specific stock was found under the chosen scan options in the past 22 trading sessions.***14.52Wk-H/L***: These have 52 weeks high/low prices and will be shown in red, green or yellow based on how close the"
         legendText = f"{legendText} price is to the 52 wk high/low value.If the 52 week high/low value is within 10% of LTP:Yellow, LTP is above 52 week high:Green. If the LTP is below 90% of 52 week high:Red.***15.1-Pd-%***: Shows the 1 period gain in percent from the given date. Similarly 2-Pd-%, 3-Pd-% etc shows 2 day, 3 days gain etc.***16.1-Pd-10k***: Shows 1 period/day portfolio value if you would"
         legendText = f"{legendText} have invested 10,000 on the given date.***17.[T][_trend_]***: [T] is for Trends followed by the trend name in the filter.***18.[BO]***: This Shows the Breakout filter value from the backtest reports and will be available only if 'showpaststrategydata' configuration is turned on.***19.[P]***: [P] shows pattern name.***20.MFI***: Top 5 Mutual fund ownership and "
-        legendText = f"{legendText} top 5 Institutional investor ownership status as on the last day of the last month, based on analysis from Morningstar.***21.FairValue***: Morningstar Fair value of a given stock as of last trading day as determined by 3rd party analysis based on fundamentals.***22.MCapWt%***: This shows the market-cap weighted portfolio weight to consider investing.\n"
-        legendText = tools.wrapFitLegendText(table,backtestSummary, legendText)
+        legendText = f"{legendText} top 5 Institutional investor ownership status as on the last day of the last month, based on analysis from Morningstar.***21.FairValue***: Morningstar Fair value of a given stock as of last trading day as determined by 3rd party analysis based on fundamentals.***22.MCapWt%***: This shows the market-cap weighted portfolio weight to consider investing. "
+        legendText = f"{legendText} ***23.Block/Bulk/Short Deals***: Ⓑ : Bulk Deals,Ⓛ: Block Deals,Ⓢ: Short deals. (B) indicates Buy, (S) indicates Sell. (1M) or (1K) indicates the quantity in million/kilo(thousand).\n"
+        legendText = tools.wrapFitLegendText(table=table,backtestSummary=backtestSummary, legendText=legendText)
         # legendText = legendText.replace("***:", colorText.END + colorText.WHITE)
         # legendText = legendText.replace("***", colorText.END + colorText.FAIL)
         # return colorText.WHITE + legendText + colorText.END
@@ -958,6 +959,29 @@ class tools:
         leftOutStocks = list(set(stockCodes)-set(processedStocks))
         default_logger().debug(f"Attempted fresh download of {len(stockCodes)} stocks and downloaded {len(processedStocks)} stocks. {len(leftOutStocks)} stocks remaining.")
         return stockDict, leftOutStocks
+
+    def loadLargeDeals():
+        shouldFetch = False
+        dealsFile = os.path.join(Archiver.get_user_data_dir(),"large_deals.json")
+        dealsFileSize = os.stat(dealsFile).st_size if os.path.exists(dealsFile) else 0
+        if dealsFileSize > 0:
+            modifiedDateTime = Archiver.get_last_modified_datetime(dealsFile)
+            curr = datetime.datetime.now(pytz.timezone("Asia/Kolkata"))
+            shouldFetch = modifiedDateTime.date() < curr.date()
+        else:
+            shouldFetch = True
+        if shouldFetch:
+            from PKNSETools.Benny.NSE import NSE
+            import json
+            try:
+                nseFetcher = NSE(Archiver.get_user_data_dir())
+                jsonDict = nseFetcher.largeDeals()
+                if jsonDict and len(jsonDict) > 0:
+                    with open(dealsFile,"w") as f:
+                        f.write(json.dumps(jsonDict))
+            except Exception as e:
+                default_logger().debug(e,exc_info=True)
+                pass
 
     def loadStockData(
         stockDict,
@@ -1280,7 +1304,7 @@ class tools:
         return '=HYPERLINK("%s", "%s")' % (url.format(tools.stockNameFromDecoratedName(value)), value)
 
     # Save screened results to excel
-    def promptSaveResults(sheetName,df_save, defaultAnswer=None,pastDate=None):
+    def promptSaveResults(sheetName,df_save, defaultAnswer=None,pastDate=None,screenResults=None):
         """
         Tries to save the dataframe output into an excel file.
 
@@ -1308,6 +1332,14 @@ class tools:
         isSaved = False
         try:
             if defaultAnswer is None:
+                responseLegends = str(
+                        OutputControls().takeUserInput(
+                            colorText.WARN
+                            + f"[>] Do you want to review legends used in the report above? [Y/N](Default:{colorText.END}{colorText.FAIL}N{colorText.END}): ",defaultInput="N"
+                        ) or "N"
+                    ).upper()
+                if "Y" in responseLegends:
+                    OutputControls().printOutput(tools.getLegendHelpText(table=None).replace("***:",colorText.END+":").replace("***"," " +colorText.FAIL))
                 if not configManager.alwaysExportToExcel:
                     response = str(
                         input(
@@ -1510,7 +1542,7 @@ class tools:
             raise ValueError
         except ValueError as e:  # pragma: no cover
             default_logger().debug(e, exc_info=True)
-            input(
+            OutputControls().takeUserInput(
                 colorText.FAIL
                 + "\n  [+] Invalid Option Selected. Press <Enter> to try again..."
                 + colorText.END
@@ -1575,7 +1607,7 @@ class tools:
             raise ValueError
         except ValueError as e:  # pragma: no cover
             default_logger().debug(e, exc_info=True)
-            input(
+            OutputControls().takeUserInput(
                 colorText.FAIL
                 + "\n  [+] Invalid Option Selected. Press <Enter> to try again..."
                 + colorText.END
@@ -1616,7 +1648,7 @@ class tools:
             raise ValueError
         except ValueError as e:  # pragma: no cover
             default_logger().debug(e, exc_info=True)
-            input(
+            OutputControls().takeUserInput(
                 colorText.FAIL
                 + "\n  [+] Invalid Option Selected. Press <Enter> to try again..."
                 + colorText.END
