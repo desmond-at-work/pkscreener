@@ -251,6 +251,9 @@ jobs:
         git add actions-data-download/*.pkl --force
         git add results/Data/*.pkl --force
         git add results/Indices/*.csv --force
+        git add results/Indices/*.csv -u
+        git add results/Data/*.pkl -u
+        git add actions-data-download/*.pkl -u
         git commit -m "GitHub-Action-Workflow-Market-Data-Download-(Default-Config)"
         git push -v -u origin +actions-data-download
       env:
@@ -321,7 +324,6 @@ jobs:
         cd /home/runner/work/PKScreener/PKScreener/
         python3 -m pip install --upgrade pip
         pip3 install -r requirements.txt
-        pip3 install -r requirements-dev.txt
         pip3 install ta-lib==0.4.32
         pip3 install .
 
@@ -344,7 +346,6 @@ jobs:
         cd ..
         python3 -m pip install --upgrade pip
         pip3 install -r requirements.txt
-        pip3 install -r requirements-dev.txt
         pip3 install .
         
     - name: Run Historical Scan on Ubuntu
