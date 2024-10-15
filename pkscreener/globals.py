@@ -1057,7 +1057,7 @@ def main(userArgs=None,optionalFinalOutcome_df=None):
                     scannerOption = scannerOption.replace("-o 'X:12:","-o 'X:W:")
                 elif predefinedOption == "1": # Predefined
                     if selIndexOption is None and (userPassedArgs is None or userPassedArgs.answerdefault is None):
-                        m1.renderForMenu(m0.find(key="X"),skip=["W","N","E","S","0","Z"])
+                        m1.renderForMenu(m0.find(key="X"),skip=["W","N","E","S","Z"])
                         selIndexOption = input(colorText.FAIL + f"{pastDate}  [+] Select option: ") or str(configManager.defaultIndex)
                         if str(selIndexOption).upper() in "M":
                             return None, None
@@ -2910,7 +2910,9 @@ def printNotifySaveScreenedResults(
     runOptionName = PKScanRunner.getFormattedChoices(userPassedArgs,selectedChoice)
     if ((":0:" in runOptionName or "_0_" in runOptionName) and userPassedArgs.progressstatus is not None) or userPassedArgs.progressstatus is not None:
         runOptionName = userPassedArgs.progressstatus.split("=>")[0].split("  [+] ")[1].strip()
-    indexName = f" for {INDICES_MAP[runOptionName.split('_')[-1]]}" if runOptionName is not None and len(runOptionName.split('_')) >= 4 and str(runOptionName.split('_')[-1]).isnumeric() and int(str(runOptionName.split('_')[-1])) <= int(list(INDICES_MAP.keys())[-2]) else ""
+    indexName = ""
+    if runOptionName.startswith("P"):
+        indexName = f" for {INDICES_MAP[runOptionName.split('_')[-1]]}" if runOptionName is not None and len(runOptionName.split('_')) >= 4 and str(runOptionName.split('_')[-1]).isnumeric() and int(str(runOptionName.split('_')[-1])) <= int(list(INDICES_MAP.keys())[-2]) else ""
     userPassedArgs.pipedtitle = f"{userPassedArgs.pipedtitle}{indexName}" if userPassedArgs.pipedtitle is not None else ""
     reportTitle = f"{userPassedArgs.pipedtitle}|" if userPassedArgs is not None and userPassedArgs.pipedtitle is not None else ""
     reportTitle = f"{runOptionName} | {reportTitle}" if runOptionName is not None else reportTitle
@@ -3123,7 +3125,7 @@ def printNotifySaveScreenedResults(
                     suggestion_text = "Try @nse_pkscreener_bot for more scans! <i><b><u>You agree that you have read</u></b>:https://pkjmesra.github.io/PKScreener/Disclaimer.txt</i> <b>and accept TOS</b>: https://pkjmesra.github.io/PKScreener/tos.txt <b>STOP using and exit from channel/group, if you do not</b>"
                     finalCaption = f"{caption}.Feel free to share on social media.Open attached image for more. Samples:<pre>{caption_results}</pre>{elapsed_text} {suggestion_text}"
                 if not testing:
-                    if PKDateUtilities.isTradingTime() and not PKDateUtilities.isTodayHoliday():
+                    if PKDateUtilities.isTradingTime() and not PKDateUtilities.isTodayHoliday()[0]:
                         kite_file_path, kite_caption = sendKiteBasketOrderReviewDetails(saveResultsTrimmed,runOptionName,caption,user)
                     else:
                         kite_file_path, kite_caption = "Dummy.html", "Dummy"
@@ -3209,11 +3211,12 @@ def sendKiteBasketOrderReviewDetails(saveResultsTrimmed,runOptionName,caption,us
         try:
             with pd.option_context('mode.chained_assignment', None):
                 kite_basket_df = pd.DataFrame(columns=["product","exchange","tradingsymbol","quantity","transaction_type","order_type","price"], index=saveResultsTrimmed.index)
-                kite_basket_df["price"] = saveResultsTrimmed["LTP"] if "LTP" in saveResultsTrimmed.columns else 0
+                price = (saveResultsTrimmed["LTP"].astype(float)*0.995).round(1) if "LTP" in saveResultsTrimmed.columns else 0
+                kite_basket_df.loc[:,"price"] = price
                 kite_basket_df["quantity"] = 1
                 kite_basket_df["product"] = "MIS"
                 kite_basket_df["exchange"] = "NSE"
-                kite_basket_df["transaction_type"] = "BUY"
+                kite_basket_df["transaction_type"] = "SELL" if "sell" in caption.lower() or "bear" in caption.lower() else "BUY"
                 kite_basket_df["order_type"] = "LIMIT"
                 kite_basket_df.reset_index(inplace=True)
                 kite_basket_df.reset_index(inplace=True, drop=True)

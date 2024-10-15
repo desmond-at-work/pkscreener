@@ -112,7 +112,7 @@ jobs:
           - os: windows-latest
             TARGET: Windows
             CMD_BUILD: |
-              pyinstaller --onefile --icon=screenshots\icon.ico pkscreener\pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress --hidden-import yfinance --hidden-import vectorbt --hidden-import PKDevTools --hidden-import PKNSETools
+              pyinstaller --onefile --add-data="README.md:." --add-data="LICENSE:." --add-data="docs\LICENSE-Others:." --add-data="Disclaimer.txt:." --icon=screenshots\icon.ico pkscreener\pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress --hidden-import yfinance --hidden-import vectorbt --hidden-import PKDevTools --hidden-import PKNSETools
             DEP_BUILD: |
               python3 -m pip install --upgrade pip
               echo Installing TA-lib...
@@ -132,6 +132,7 @@ jobs:
               pip3 uninstall -y PKNSETools
               pip3 uninstall -y PKDevTools
               pip3 install -r requirements.txt
+              pip3 install -r requirements-dev.txt
               pip3 install .
             TEST_BUILD: |
               ./dist/pkscreenercli.exe --testbuild
@@ -142,7 +143,7 @@ jobs:
           - os: ubuntu-20.04
             TARGET: Linux
             CMD_BUILD: |
-              pyinstaller --onefile --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
+              pyinstaller --onefile --add-data="README.md:." --add-data="LICENSE:." --add-data="docs/LICENSE-Others:." --add-data="Disclaimer.txt:." --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
               mv /home/runner/work/PKScreener/PKScreener/dist/pkscreenercli /home/runner/work/PKScreener/PKScreener/dist/pkscreenercli.bin
               chmod +x /home/runner/work/PKScreener/PKScreener/dist/pkscreenercli.bin
             DEP_BUILD: |
@@ -158,6 +159,7 @@ jobs:
               pip3 uninstall -y PKNSETools
               pip3 uninstall -y PKDevTools
               pip3 install -r requirements.txt
+              pip3 install -r requirements-dev.txt
               pip3 install ta-lib==0.4.32
               pip3 install .
             TEST_BUILD: |
@@ -169,7 +171,7 @@ jobs:
           - os: macos-latest
             TARGET: MacOS
             CMD_BUILD: |
-              pyinstaller --onefile --windowed --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
+              pyinstaller --onefile --windowed --add-data="README.md:." --add-data="LICENSE:." --add-data="docs/LICENSE-Others:." --add-data="Disclaimer.txt:." --icon=screenshots/icon.ico pkscreener/pkscreenercli.py  --hidden-import cmath --hidden-import talib.stream --hidden-import numpy --hidden-import pandas --hidden-import alive_progress
               mv /Users/runner/work/PKScreener/PKScreener/dist/pkscreenercli /Users/runner/work/PKScreener/PKScreener/dist/pkscreenercli.run
             DEP_BUILD: |
               brew install ta-lib
@@ -177,6 +179,7 @@ jobs:
               pip3 uninstall -y PKNSETools
               pip3 uninstall -y PKDevTools
               pip3 install -r requirements.txt
+              pip3 install -r requirements-dev.txt
               python3 -m pip install -U ta-lib==0.4.32
               pip3 install .
             TEST_BUILD: |
@@ -362,3 +365,16 @@ jobs:
       version: ${{ needs.Build.outputs.version }}
     secrets: inherit
   
+  Cleanup:
+    name: Clean up and delete old release
+    runs-on: ${{ 'ubuntu-20.04'}} #ubuntu-20.04 #windows-latest
+    permissions: write-all
+    needs: [Build, README_Update]
+    steps:
+    - name: Delete this workflow run
+      continue-on-error: true
+      shell: bash
+      run: |
+        gh release delete ${{ needs.Build.outputs.oldVersion }} --cleanup-tag -y -R pkjmesra/pkscreener
+      env:
+        GH_TOKEN : ${{secrets.GITHUB_TOKEN}}

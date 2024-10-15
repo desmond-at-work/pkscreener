@@ -67,9 +67,9 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["AUTOGRAPH_VERBOSITY"] = "0"
 
 printenabled=False
-LoggedIn = False
 originalStdOut=None
 original__stdout=None
+LoggedIn = False
 cron_runs=0
 
 def decorator(func):
